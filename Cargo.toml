@@ -1,5 +1,5 @@
 [package]
-name = "adventure_rs"
+name = "mc_chat"
 version = "0.1.0"
 edition = "2018"
 
