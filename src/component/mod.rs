@@ -1,7 +1,9 @@
 use crate::{ChatColor, ClickEvent, HoverEvent};
 use serde::Serialize;
 
-pub trait Component {
+use erased_serde::serialize_trait_object;
+
+pub trait Component: erased_serde::Serialize {
     fn get_siblings<'a>(&'a self) -> &'a Vec<Box<dyn Component>>;
 
     fn get_style(&self) -> &ComponentStyle;
@@ -11,27 +13,38 @@ pub trait Component {
     fn append<'a>(&'a mut self, sibling: Box<dyn Component>);
 }
 
+serialize_trait_object!(Component);
+
 #[derive(Serialize)]
 pub struct ComponentStyle {
-    pub bold: bool,
-    pub italic: bool,
-    pub underlined: bool,
-    pub strikethrough: bool,
-    pub obfuscated: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bold: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub italic: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub underlined: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub strikethrough: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub obfuscated: Option<()>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub color: Option<ChatColor>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub insertion: Option<String>,
+    #[serde(rename = "clickEvent", skip_serializing_if = "Option::is_none")]
     pub click_event: Option<ClickEvent>,
+    #[serde(rename = "hoverEvent", skip_serializing_if = "Option::is_none")]
     pub hover_event: Option<HoverEvent>
 }
 
 impl ComponentStyle {
     pub fn new() -> ComponentStyle {
         ComponentStyle {
-            bold: false,
-            italic: false,
-            underlined: false,
-            strikethrough: false,
-            obfuscated: false,
+            bold: None,
+            italic: None,
+            underlined: None,
+            strikethrough: None,
+            obfuscated: None,
             color: None,
             insertion: None,
             click_event: None,
@@ -52,21 +65,21 @@ impl ComponentStyle {
     }
 
     pub fn merge_style(&mut self, style: &ComponentStyle) {
-        if !self.bold { self.bold = style.bold; }
-        if !self.italic { self.italic = style.italic; }
-        if !self.underlined { self.underlined = style.underlined; }
-        if !self.strikethrough { self.strikethrough = style.strikethrough; }
-        if !self.obfuscated { self.obfuscated = style.obfuscated; }
+        if self.bold.is_none() { self.bold = style.bold; }
+        if self.italic.is_none() { self.italic = style.italic; }
+        if self.underlined.is_none() { self.underlined = style.underlined; }
+        if self.strikethrough.is_none() { self.strikethrough = style.strikethrough; }
+        if self.obfuscated.is_none() { self.obfuscated = style.obfuscated; }
         if self.color.is_none() { self.color = style.color.clone(); }
         if self.insertion.is_none() { self.insertion = style.insertion.clone() }
     }
 
     pub fn reset(&mut self) {
-        self.bold = false;
-        self.italic = false;
-        self.underlined = false;
-        self.strikethrough = false;
-        self.obfuscated = false;
+        self.bold = None;
+        self.italic = None;
+        self.underlined = None;
+        self.strikethrough = None;
+        self.obfuscated = None;
         self.color = None;
         self.insertion = None;
         self.hover_event = None;

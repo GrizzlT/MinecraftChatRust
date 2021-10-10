@@ -5,14 +5,16 @@ use serde::Serialize;
 #[derive(Serialize)]
 pub struct TextComponent {
     text: String,
+    #[serde(flatten)]
     style: ComponentStyle,
+    #[serde(rename = "extra", skip_serializing_if = "Vec::is_empty")]
     siblings: Vec<Box<dyn Component>>
 }
 
 impl TextComponent {
-    pub fn from_text(text: String) -> TextComponent {
+    pub fn from_text<T: Into<String>>(text: T) -> TextComponent {
         TextComponent {
-            text,
+            text: text.into(),
             style: ComponentStyle::new(),
             siblings: vec![]
         }
@@ -46,7 +48,7 @@ impl Component for TextComponent {
     }
 }
 
-pub struct TranslatableComponent {
+/*pub struct TranslatableComponent {
     key: String,
     with: Vec<Box<dyn Component>>,
     style: ComponentStyle,
@@ -98,4 +100,4 @@ impl Component for TranslatableComponent {
     fn append<'a>(&'a mut self, sibling: Box<dyn Component>) {
         self.siblings.push(sibling)
     }
-}
+}*/
