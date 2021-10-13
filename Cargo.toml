@@ -6,7 +6,7 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/GrizzlT/MinecraftChatRust"
 description = "A crate aimed to provide easy-to-use Rust objects to work with Minecraft's raw JSON message format"
 readme = "README.md"
-keywords = [ "parsing", "minecraft", "mc", "chat", "message", "format"]
+keywords = [ "parsing", "minecraft", "chat", "message", "format"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
