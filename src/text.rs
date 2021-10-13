@@ -1,13 +1,15 @@
 use crate::{Component, ComponentStyle};
 
+#[cfg(feature = "use-serde")]
 use serde::Serialize;
 
-#[derive(Serialize)]
+/// A Literal Text Component.
+#[cfg_attr(feature = "use-serde", derive(Serialize))]
 pub struct TextComponent {
     text: String,
-    #[serde(flatten)]
+    #[cfg_attr(feature = "use-serde", serde(flatten))]
     style: ComponentStyle,
-    #[serde(rename = "extra", skip_serializing_if = "Vec::is_empty")]
+    #[cfg_attr(feature = "use-serde", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
     siblings: Vec<Box<dyn Component>>
 }
 
@@ -31,7 +33,7 @@ impl TextComponent {
 }
 
 impl Component for TextComponent {
-    fn get_siblings<'a>(&'a self) -> &'a Vec<Box<dyn Component>> {
+    fn get_children<'a>(&'a self) -> &'a Vec<Box<dyn Component>> {
         &self.siblings
     }
 
@@ -43,22 +45,27 @@ impl Component for TextComponent {
         &mut self.style
     }
 
-    fn append<'a>(&'a mut self, sibling: Box<dyn Component>) {
-        self.siblings.push(sibling)
+    fn append(&mut self, child: Box<dyn Component>) {
+        self.siblings.push(child)
     }
 }
 
-/*pub struct TranslatableComponent {
+/// A Text Component that uses a translation key and arguments.
+#[cfg_attr(feature = "use-serde", derive(Serialize))]
+pub struct TranslatableComponent {
     key: String,
+    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Vec::is_empty"))]
     with: Vec<Box<dyn Component>>,
+    #[cfg_attr(feature = "use-serde", serde(flatten))]
     style: ComponentStyle,
+    #[cfg_attr(feature = "use-serde", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
     siblings: Vec<Box<dyn Component>>
 }
 
 impl TranslatableComponent {
-    pub fn from_key(key: String) -> TranslatableComponent {
+    pub fn from_key<T: Into<String>>(key: T) -> TranslatableComponent {
         TranslatableComponent {
-            key,
+            key: key.into(),
             with: vec![],
             style: ComponentStyle::new(),
             siblings: vec![]
@@ -85,7 +92,7 @@ impl TranslatableComponent {
 }
 
 impl Component for TranslatableComponent {
-    fn get_siblings<'a>(&'a self) -> &'a Vec<Box<dyn Component>> {
+    fn get_children<'a>(&'a self) -> &'a Vec<Box<dyn Component>> {
         &self.siblings
     }
 
@@ -97,7 +104,7 @@ impl Component for TranslatableComponent {
         &mut self.style
     }
 
-    fn append<'a>(&'a mut self, sibling: Box<dyn Component>) {
-        self.siblings.push(sibling)
+    fn append(&mut self, child: Box<dyn Component>) {
+        self.siblings.push(child)
     }
-}*/
+}

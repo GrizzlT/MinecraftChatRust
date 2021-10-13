@@ -1,18 +1,29 @@
-#![allow(dead_code)]
+//!
+//! This crate provides Rust objects that map to the minecraft
+//! protocol raw JSON message format used for chat messages, books, titles...
+//!
+//! Serialization and Deserialization is planned to be implemented for both legacy and json strings.
+//!
+//! Currently this is still a work in progress so please check out our [github](https://github.com/GrizzlT/MinecraftChatRust) and
+//! feel free to contribute.
 
 pub use component::Component;
 pub use component::ComponentStyle;
 
+pub use text::TextComponent;
+pub use text::TranslatableComponent;
+
+#[cfg(feature = "use-serde")]
 use serde::{Serialize, Deserialize, Serializer};
+#[cfg(feature = "use-serde")]
 use serde::ser::SerializeStruct;
 
-pub mod text;
-#[doc(hidden)]
-pub mod component;
-
+mod text;
+mod component;
 mod tests;
 
-#[derive(Clone)]
+/// The different colors a [`Component`] can have.
+#[cfg_attr(feature = "use-serde", derive(Clone))]
 pub enum ChatColor {
     Black,
     DarkBlue,
@@ -30,10 +41,15 @@ pub enum ChatColor {
     Pink,
     Yellow,
     White,
+    /// # Warning
+    /// This field was introduced in 1.16 and must be a valid 6-digit hexadecimal value prefixed by a `#`.
+    ///
+    /// Implementations of serializers for older versions should ignore this field at all times.
     Custom(String),
     Reset
 }
 
+#[cfg(feature = "use-serde")]
 impl Serialize for ChatColor {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         serializer.serialize_str(match self {
@@ -59,15 +75,21 @@ impl Serialize for ChatColor {
     }
 }
 
-#[derive(Deserialize)]
+/// A ClickEvent useful in a chat message or book.
+#[cfg_attr(feature = "use-serde", derive(Deserialize))]
 pub enum ClickEvent {
     OpenUrl(String),
     RunCommand(String),
     SuggestCommand(String),
     ChangePage(u32),
-    CopyToClipBoard
+    /// # Warning
+    /// This field was introduced in 1.15.
+    ///
+    /// Implementations of serializers for older versions should ignore this field at all times.
+    CopyToClipBoard(String)
 }
 
+#[cfg(feature = "use-serde")]
 impl Serialize for ClickEvent {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut item = serializer.serialize_struct("clickEvent", 2)?;
@@ -88,20 +110,23 @@ impl Serialize for ClickEvent {
                 item.serialize_field("action", "change_page")?;
                 item.serialize_field("value", page)?;
             }
-            ClickEvent::CopyToClipBoard => {
+            ClickEvent::CopyToClipBoard(value) => {
                 item.serialize_field("action", "copy_to_clipboard")?;
+                item.serialize_field("value", value)?;
             }
         }
         item.end()
     }
 }
 
+/// A HoverEvent useful in a chat message or book.
 pub enum HoverEvent {
     ShowText(Box<dyn Component>),
     ShowItem(String),
     ShowEntity(String)
 }
 
+#[cfg(feature = "use-serde")]
 impl Serialize for HoverEvent {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
         let mut event = serializer.serialize_struct("hoverEvent", 2)?;
@@ -123,6 +148,7 @@ impl Serialize for HoverEvent {
     }
 }
 
+/// Defines the ability of a component to change their style.
 pub trait DecorateComponent {
     fn color(self, color: Option<ChatColor>) -> Self;
 
@@ -138,14 +164,23 @@ pub trait DecorateComponent {
 
     fn obfuscated(self, obfuscated: bool) -> Self;
 
+    fn font(self, font: Option<String>) -> Self;
+
     fn insertion(self, insertion: Option<String>) -> Self;
 
     fn click_event(self, click_event: Option<ClickEvent>) -> Self;
 
      fn hover_event(self, hover_event: Option<HoverEvent>) -> Self;
 
+    /// Tries to assign all fields from the specified style to this object.
+    ///
+    /// Implementations should indicate which fields are assigned and which fields are not.
     fn apply_style(self, style: &ComponentStyle) -> Self;
 
+    /// Tries to assign from corresponding fields from the specified style to all [`None`] fields
+    /// of this object.
+    ///
+    /// Implementations should indicate which fields are assigned and which fields are not.
     fn merge_style(self, style: &ComponentStyle) -> Self;
 
     fn reset_style(self) -> Self;
@@ -165,27 +200,32 @@ impl<T: Component> DecorateComponent for T {
     }
 
     fn bold(mut self, bold: bool) -> Self {
-        self.get_style_mut().bold = if bold { Some(()) } else { None };
+        self.get_style_mut().bold = if bold { Some(true) } else { None };
         self
     }
 
     fn italic(mut self, italic: bool) -> Self {
-        self.get_style_mut().italic = if italic { Some(()) } else { None };
+        self.get_style_mut().italic = if italic { Some(true) } else { None };
         self
     }
 
     fn underlined(mut self, underlined: bool) -> Self {
-        self.get_style_mut().underlined = if underlined { Some(()) } else { None };
+        self.get_style_mut().underlined = if underlined { Some(true) } else { None };
         self
     }
 
     fn strikethrough(mut self, strikethrough: bool) -> Self {
-        self.get_style_mut().strikethrough = if strikethrough { Some(()) } else { None };
+        self.get_style_mut().strikethrough = if strikethrough { Some(true) } else { None };
         self
     }
 
     fn obfuscated(mut self, obfuscated: bool) -> Self {
-        self.get_style_mut().obfuscated = if obfuscated { Some(()) } else { None };
+        self.get_style_mut().obfuscated = if obfuscated { Some(true) } else { None };
+        self
+    }
+
+    fn font(mut self, font: Option<String>) -> Self {
+        self.get_style_mut().font = font;
         self
     }
 
