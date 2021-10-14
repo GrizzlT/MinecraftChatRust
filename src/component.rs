@@ -1,17 +1,11 @@
 use crate::{ChatColor, ClickEvent, HoverEvent};
-#[cfg(feature = "use-serde")]
-use serde::Serialize;
-
-#[cfg(feature = "use-serde")]
-use erased_serde::serialize_trait_object;
 
 ///
 /// Represents a text object from minecraft that
 /// can be serialized and deserialized into a JSON-message
 /// suitable for sending across the minecraft protocol.
 /// (see [Wiki.vg](https://wiki.vg/Chat))
-#[cfg(feature = "use-serde")]
-#[cfg_attr(not(feature = "use-serde"), doc(hidden))]
+#[cfg(feature = "serde-support")]
 pub trait Component: erased_serde::Serialize {
     ///
     /// Fetches the children of this component.
@@ -30,13 +24,13 @@ pub trait Component: erased_serde::Serialize {
     /// This will result in an addition to the `"extra"` element in the JSON format.
     fn append(&mut self, child: Box<dyn Component>);
 }
+
 ///
 /// Represents a text object from minecraft that
 /// can be serialized and deserialized into a JSON-message
 /// suitable for sending across the minecraft protocol.
 /// (see [Wiki.vg](https://wiki.vg/Chat))
-#[cfg(not(feature = "use-serde"))]
-#[cfg_attr(feature = "use-serde", doc(hidden))]
+#[cfg(not(feature = "serde-support"))]
 pub trait Component {
     ///
     /// Fetches the children of this component.
@@ -56,39 +50,36 @@ pub trait Component {
     fn append(&mut self, child: Box<dyn Component>);
 }
 
-#[cfg(feature = "use-serde")]
-serialize_trait_object!(Component);
-
 /// The central struct containing all style information about a [`Component`].
-#[cfg_attr(feature = "use-serde", derive(Serialize))]
+#[cfg_attr(feature = "serde-support", derive(serde::Serialize))]
 pub struct ComponentStyle {
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     pub bold: Option<bool>,
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     pub italic: Option<bool>,
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     pub underlined: Option<bool>,
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     pub strikethrough: Option<bool>,
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     pub obfuscated: Option<bool>,
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     pub color: Option<ChatColor>,
     /// # Warning
     /// This is only available since 1.16.
     ///
     /// Implementations of serializers for older versions should ignore this field at all times.
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     pub font: Option<String>,
     /// # Warning
     /// This is not available before 1.8.
     ///
     /// Implementations of serializers for older versions should ignore this field at all times.
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     pub insertion: Option<String>,
-    #[cfg_attr(feature = "use-serde", serde(rename = "clickEvent", skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(rename = "clickEvent", skip_serializing_if = "Option::is_none"))]
     pub click_event: Option<ClickEvent>,
-    #[cfg_attr(feature = "use-serde", serde(rename = "hoverEvent", skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde-support", serde(rename = "hoverEvent", skip_serializing_if = "Option::is_none"))]
     pub hover_event: Option<HoverEvent>
 }
 

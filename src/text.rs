@@ -1,15 +1,15 @@
 use crate::{Component, ComponentStyle};
 
-#[cfg(feature = "use-serde")]
+#[cfg(feature = "serde-support")]
 use serde::Serialize;
 
 /// A Literal Text Component.
-#[cfg_attr(feature = "use-serde", derive(Serialize))]
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
 pub struct TextComponent {
     text: String,
-    #[cfg_attr(feature = "use-serde", serde(flatten))]
+    #[cfg_attr(feature = "serde-support", serde(flatten))]
     style: ComponentStyle,
-    #[cfg_attr(feature = "use-serde", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(feature = "serde-support", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
     siblings: Vec<Box<dyn Component>>
 }
 
@@ -51,14 +51,14 @@ impl Component for TextComponent {
 }
 
 /// A Text Component that uses a translation key and arguments.
-#[cfg_attr(feature = "use-serde", derive(Serialize))]
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
 pub struct TranslatableComponent {
     key: String,
-    #[cfg_attr(feature = "use-serde", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Vec::is_empty"))]
     with: Vec<Box<dyn Component>>,
-    #[cfg_attr(feature = "use-serde", serde(flatten))]
+    #[cfg_attr(feature = "serde-support", serde(flatten))]
     style: ComponentStyle,
-    #[cfg_attr(feature = "use-serde", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(feature = "serde-support", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
     siblings: Vec<Box<dyn Component>>
 }
 

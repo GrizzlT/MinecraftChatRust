@@ -9,21 +9,18 @@
 
 pub use component::Component;
 pub use component::ComponentStyle;
-
 pub use text::TextComponent;
 pub use text::TranslatableComponent;
-
-#[cfg(feature = "use-serde")]
-use serde::{Serialize, Deserialize, Serializer};
-#[cfg(feature = "use-serde")]
-use serde::ser::SerializeStruct;
 
 mod text;
 mod component;
 mod tests;
 
+#[cfg(feature = "serde-support")]
+mod serde_support;
+
 /// The different colors a [`Component`] can have.
-#[cfg_attr(feature = "use-serde", derive(Clone))]
+#[derive(Clone)]
 pub enum ChatColor {
     Black,
     DarkBlue,
@@ -49,34 +46,7 @@ pub enum ChatColor {
     Reset
 }
 
-#[cfg(feature = "use-serde")]
-impl Serialize for ChatColor {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        serializer.serialize_str(match self {
-            ChatColor::Black => "black",
-            ChatColor::DarkBlue => "dark_blue",
-            ChatColor::DarkGreen => "dark_green",
-            ChatColor::DarkCyan => "dark_aqua",
-            ChatColor::DarkRed => "dark-red",
-            ChatColor::Purple => "dark_purple",
-            ChatColor::Gold => "gold",
-            ChatColor::Gray => "gray",
-            ChatColor::DarkGray => "dark_gray",
-            ChatColor::Blue => "blue",
-            ChatColor::Green => "green",
-            ChatColor::Cyan => "aqua",
-            ChatColor::Red => "red",
-            ChatColor::Pink => "light_purple",
-            ChatColor::Yellow => "yellow",
-            ChatColor::White => "white",
-            ChatColor::Custom(color) => color,
-            ChatColor::Reset => "reset"
-        })
-    }
-}
-
 /// A ClickEvent useful in a chat message or book.
-#[cfg_attr(feature = "use-serde", derive(Deserialize))]
 pub enum ClickEvent {
     OpenUrl(String),
     RunCommand(String),
@@ -89,63 +59,11 @@ pub enum ClickEvent {
     CopyToClipBoard(String)
 }
 
-#[cfg(feature = "use-serde")]
-impl Serialize for ClickEvent {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let mut item = serializer.serialize_struct("clickEvent", 2)?;
-        match self {
-            ClickEvent::OpenUrl(url) => {
-                item.serialize_field("action", "open_url")?;
-                item.serialize_field("value", url)?;
-            }
-            ClickEvent::RunCommand(cmd) => {
-                item.serialize_field("action", "run_command")?;
-                item.serialize_field("value", cmd)?;
-            }
-            ClickEvent::SuggestCommand(cmd) => {
-                item.serialize_field("action", "suggest_command")?;
-                item.serialize_field("value", cmd)?;
-            }
-            ClickEvent::ChangePage(page) => {
-                item.serialize_field("action", "change_page")?;
-                item.serialize_field("value", page)?;
-            }
-            ClickEvent::CopyToClipBoard(value) => {
-                item.serialize_field("action", "copy_to_clipboard")?;
-                item.serialize_field("value", value)?;
-            }
-        }
-        item.end()
-    }
-}
-
 /// A HoverEvent useful in a chat message or book.
 pub enum HoverEvent {
     ShowText(Box<dyn Component>),
     ShowItem(String),
     ShowEntity(String)
-}
-
-#[cfg(feature = "use-serde")]
-impl Serialize for HoverEvent {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        let mut event = serializer.serialize_struct("hoverEvent", 2)?;
-        match self {
-            HoverEvent::ShowText(text) => {
-                event.serialize_field("action", "show_text")?;
-                event.serialize_field("value", text)?;
-            }
-            HoverEvent::ShowItem(item) => {
-                event.serialize_field("action", "show_item")?;
-                event.serialize_field("value", item)?;
-            }
-            HoverEvent::ShowEntity(entity) => {
-                event.serialize_field("action", "show_entity")?;
-                event.serialize_field("value", entity)?;
-            }
-        }
-        event.end()
-    }
 }
 
 /// Defines the ability of a component to change their style.
