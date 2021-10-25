@@ -11,6 +11,10 @@ pub use component::Component;
 pub use component::ComponentStyle;
 pub use text::TextComponent;
 pub use text::TranslatableComponent;
+use crate::component::ComponentStyleEditable;
+
+#[macro_use]
+mod macros;
 
 mod text;
 mod component;
@@ -95,80 +99,69 @@ pub trait DecorateComponent {
     /// Implementations should indicate which fields are assigned and which fields are not.
     fn apply_style(self, style: &ComponentStyle) -> Self;
 
-    /// Tries to assign from corresponding fields from the specified style to all [`None`] fields
-    /// of this object.
-    ///
-    /// Implementations should indicate which fields are assigned and which fields are not.
-    fn merge_style(self, style: &ComponentStyle) -> Self;
-
     fn reset_style(self) -> Self;
 }
 
 impl<T: Component> DecorateComponent for T {
     fn color(mut self, color: Option<ChatColor>) -> Self {
-        self.get_style_mut().color = color;
+        self.get_style_mut().color(color);
         self
     }
 
     fn color_if_absent(mut self, color: ChatColor) -> Self {
-        if self.get_style().color.is_none() {
-            self.get_style_mut().color = Some(color);
+        if self.get_style().color_absent() {
+            self.get_style_mut().color(Some(color));
         }
         self
     }
 
     fn bold(mut self, bold: bool) -> Self {
-        self.get_style_mut().bold = if bold { Some(true) } else { None };
+        self.get_style_mut().bold(bold);
         self
     }
 
     fn italic(mut self, italic: bool) -> Self {
-        self.get_style_mut().italic = if italic { Some(true) } else { None };
+        self.get_style_mut().italic(italic);
         self
     }
 
     fn underlined(mut self, underlined: bool) -> Self {
-        self.get_style_mut().underlined = if underlined { Some(true) } else { None };
+        self.get_style_mut().underlined(underlined);
         self
     }
 
     fn strikethrough(mut self, strikethrough: bool) -> Self {
-        self.get_style_mut().strikethrough = if strikethrough { Some(true) } else { None };
+        self.get_style_mut().strikethrough(strikethrough);
         self
     }
 
     fn obfuscated(mut self, obfuscated: bool) -> Self {
-        self.get_style_mut().obfuscated = if obfuscated { Some(true) } else { None };
+        self.get_style_mut().obfuscated(obfuscated);
         self
     }
 
     fn font(mut self, font: Option<String>) -> Self {
-        self.get_style_mut().font = font;
+        self.get_style_mut().font(font);
         self
     }
 
     fn insertion(mut self, insertion: Option<String>) -> Self {
-        self.get_style_mut().insertion = insertion;
+        self.get_style_mut().insertion(insertion);
         self
     }
 
     fn click_event(mut self, click_event: Option<ClickEvent>) -> Self {
-        self.get_style_mut().click_event = click_event;
+        self.get_style_mut().click_event(click_event);
         self
     }
 
     fn hover_event(mut self, hover_event: Option<HoverEvent>) -> Self {
-        self.get_style_mut().hover_event = hover_event;
+        self.get_style_mut().hover_event(hover_event);
         self
     }
 
     fn apply_style(mut self, style: &ComponentStyle) -> Self {
         self.get_style_mut().apply_style(style);
-        self
-    }
-
-    fn merge_style(mut self, style: &ComponentStyle) -> Self {
-        self.get_style_mut().merge_style(style);
         self
     }
 

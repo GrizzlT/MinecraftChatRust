@@ -1,9 +1,8 @@
+use erased_serde::serialize_trait_object;
 use serde::{Serialize, Serializer};
 use serde::ser::SerializeStruct;
 
-use erased_serde::serialize_trait_object;
-
-use crate::{ChatColor, ClickEvent, HoverEvent};
+use crate::{ChatColor, ClickEvent, ComponentStyle, HoverEvent};
 
 serialize_trait_object!(crate::Component);
 
@@ -79,5 +78,15 @@ impl Serialize for HoverEvent {
             }
         }
         event.end()
+    }
+}
+
+impl Serialize for ComponentStyle {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+        match self {
+            ComponentStyle::V1_7(style) => style.serialize(serializer),
+            ComponentStyle::V1_8(style) => style.serialize(serializer),
+            ComponentStyle::V1_16(style) => style.serialize(serializer),
+        }
     }
 }

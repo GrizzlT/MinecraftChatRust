@@ -14,10 +14,10 @@ pub struct TextComponent {
 }
 
 impl TextComponent {
-    pub fn from_text<T: Into<String>>(text: T) -> TextComponent {
+    pub fn from_text<T: Into<String>>(text: T, style: ComponentStyle) -> TextComponent {
         TextComponent {
             text: text.into(),
-            style: ComponentStyle::new(),
+            style,
             siblings: vec![]
         }
     }
@@ -63,11 +63,11 @@ pub struct TranslatableComponent {
 }
 
 impl TranslatableComponent {
-    pub fn from_key<T: Into<String>>(key: T) -> TranslatableComponent {
+    pub fn from_key<T: Into<String>>(key: T, style: ComponentStyle) -> TranslatableComponent {
         TranslatableComponent {
             key: key.into(),
             with: vec![],
-            style: ComponentStyle::new(),
+            style,
             siblings: vec![]
         }
     }
