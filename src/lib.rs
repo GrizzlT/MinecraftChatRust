@@ -10,6 +10,8 @@
 pub use component::Component;
 pub use component::ComponentStyle;
 pub use component::ComponentStyleEditable;
+pub use component::{VERSION_1_15, VERSION_1_16, VERSION_1_7, VERSION_1_8};
+
 pub use text::TextComponent;
 pub use text::TranslatableComponent;
 

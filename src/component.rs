@@ -1,5 +1,14 @@
 use crate::{ChatColor, ClickEvent, HoverEvent};
 
+/// The version number of the Minecraft protocol for 1.7
+pub const VERSION_1_7: i32 = 4;
+/// The version number of the Minecraft protocol for 1.8
+pub const VERSION_1_8: i32 = 47;
+/// The version number of the Minecraft protocol for 1.15
+pub const VERSION_1_15: i32 = 573;
+/// The version number of the Minecraft protocol for 1.16
+pub const VERSION_1_16: i32 = 735;
+
 ///
 /// Represents a text object from minecraft that
 /// can be serialized and deserialized into a JSON-message
@@ -109,6 +118,8 @@ pub trait ComponentStyleEditable {
     fn get_click_event(&self) -> Option<&ClickEvent>;
 
     fn get_hover_event(&self) -> Option<&HoverEvent>;
+
+    fn change_version(&mut self, to: i32);
 }
 
 impl ComponentStyle {
@@ -297,5 +308,9 @@ impl ComponentStyleEditable for ComponentStyle {
 
     fn get_hover_event(&self) -> Option<&HoverEvent> {
         self.hover_event.as_ref()
+    }
+
+    fn change_version(&mut self, to: i32) {
+        self.version = to;
     }
 }
