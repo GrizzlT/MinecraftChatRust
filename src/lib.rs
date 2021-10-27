@@ -9,20 +9,18 @@
 
 pub use component::Component;
 pub use component::ComponentStyle;
+pub use component::ComponentStyleEditable;
 pub use text::TextComponent;
 pub use text::TranslatableComponent;
-use crate::component::ComponentStyleEditable;
 
-#[macro_use]
-mod macros;
-
-mod text;
 mod component;
 mod tests;
+mod text;
 
 #[cfg(feature = "serde-support")]
 mod serde_support;
 
+// TODO: automatically find nearest value when serializing for an old version
 /// The different colors a [`Component`] can have.
 #[derive(Clone)]
 pub enum ChatColor {
@@ -42,12 +40,9 @@ pub enum ChatColor {
     Pink,
     Yellow,
     White,
-    /// # Warning
-    /// This field was introduced in 1.16 and must be a valid 6-digit hexadecimal value prefixed by a `#`.
-    ///
-    /// Implementations of serializers for older versions should ignore this field at all times.
+    /// This field is ignored for versions older than 1.16.
     Custom(String),
-    Reset
+    Reset,
 }
 
 /// A ClickEvent useful in a chat message or book.
@@ -56,18 +51,16 @@ pub enum ClickEvent {
     RunCommand(String),
     SuggestCommand(String),
     ChangePage(u32),
-    /// # Warning
-    /// This field was introduced in 1.15.
-    ///
-    /// Implementations of serializers for older versions should ignore this field at all times.
-    CopyToClipBoard(String)
+    /// This field is ignored for versions older than 1.15.
+    CopyToClipBoard(String),
 }
 
 /// A HoverEvent useful in a chat message or book.
+// TODO: change serialization to 'contents' instead of 'value'
 pub enum HoverEvent {
     ShowText(Box<dyn Component>),
     ShowItem(String),
-    ShowEntity(String)
+    ShowEntity(String),
 }
 
 /// Defines the ability of a component to change their style.
@@ -92,7 +85,7 @@ pub trait DecorateComponent {
 
     fn click_event(self, click_event: Option<ClickEvent>) -> Self;
 
-     fn hover_event(self, hover_event: Option<HoverEvent>) -> Self;
+    fn hover_event(self, hover_event: Option<HoverEvent>) -> Self;
 
     /// Tries to assign all fields from the specified style to this object.
     ///
@@ -109,9 +102,7 @@ impl<T: Component> DecorateComponent for T {
     }
 
     fn color_if_absent(mut self, color: ChatColor) -> Self {
-        if self.get_style().color_absent() {
-            self.get_style_mut().color(Some(color));
-        }
+        self.get_style_mut().color_if_absent(color);
         self
     }
 

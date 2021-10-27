@@ -9,8 +9,11 @@ pub struct TextComponent {
     text: String,
     #[cfg_attr(feature = "serde-support", serde(flatten))]
     style: ComponentStyle,
-    #[cfg_attr(feature = "serde-support", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
-    siblings: Vec<Box<dyn Component>>
+    #[cfg_attr(
+        feature = "serde-support",
+        serde(rename = "extra", skip_serializing_if = "Vec::is_empty")
+    )]
+    siblings: Vec<Box<dyn Component>>,
 }
 
 impl TextComponent {
@@ -18,7 +21,7 @@ impl TextComponent {
         TextComponent {
             text: text.into(),
             style,
-            siblings: vec![]
+            siblings: vec![],
         }
     }
 
@@ -54,12 +57,18 @@ impl Component for TextComponent {
 #[cfg_attr(feature = "serde-support", derive(Serialize))]
 pub struct TranslatableComponent {
     key: String,
-    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Vec::is_empty"))]
+    #[cfg_attr(
+        feature = "serde-support",
+        serde(skip_serializing_if = "Vec::is_empty")
+    )]
     with: Vec<Box<dyn Component>>,
     #[cfg_attr(feature = "serde-support", serde(flatten))]
     style: ComponentStyle,
-    #[cfg_attr(feature = "serde-support", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
-    siblings: Vec<Box<dyn Component>>
+    #[cfg_attr(
+        feature = "serde-support",
+        serde(rename = "extra", skip_serializing_if = "Vec::is_empty")
+    )]
+    siblings: Vec<Box<dyn Component>>,
 }
 
 impl TranslatableComponent {
@@ -68,7 +77,7 @@ impl TranslatableComponent {
             key: key.into(),
             with: vec![],
             style,
-            siblings: vec![]
+            siblings: vec![],
         }
     }
 

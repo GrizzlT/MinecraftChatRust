@@ -1,13 +1,16 @@
 use erased_serde::serialize_trait_object;
+use serde::ser::{SerializeMap, SerializeStruct};
 use serde::{Serialize, Serializer};
-use serde::ser::SerializeStruct;
 
 use crate::{ChatColor, ClickEvent, ComponentStyle, HoverEvent};
 
 serialize_trait_object!(crate::Component);
 
 impl Serialize for ChatColor {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_str(match self {
             ChatColor::Black => "black",
             ChatColor::DarkBlue => "dark_blue",
@@ -26,13 +29,16 @@ impl Serialize for ChatColor {
             ChatColor::Yellow => "yellow",
             ChatColor::White => "white",
             ChatColor::Custom(color) => color,
-            ChatColor::Reset => "reset"
+            ChatColor::Reset => "reset",
         })
     }
 }
 
 impl Serialize for ClickEvent {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         let mut item = serializer.serialize_struct("clickEvent", 2)?;
         match self {
             ClickEvent::OpenUrl(url) => {
@@ -60,8 +66,12 @@ impl Serialize for ClickEvent {
     }
 }
 
+// TODO: change serialization to 'contents' instead of 'value'
 impl Serialize for HoverEvent {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         let mut event = serializer.serialize_struct("hoverEvent", 2)?;
         match self {
             HoverEvent::ShowText(text) => {
@@ -82,11 +92,58 @@ impl Serialize for HoverEvent {
 }
 
 impl Serialize for ComponentStyle {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
-        match self {
-            ComponentStyle::V1_7(style) => style.serialize(serializer),
-            ComponentStyle::V1_8(style) => style.serialize(serializer),
-            ComponentStyle::V1_16(style) => style.serialize(serializer),
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(None)?;
+        if self.bold.is_some() {
+            map.serialize_entry("bold", &self.bold)?;
         }
+        if self.italic.is_some() {
+            map.serialize_entry("italic", &self.italic)?;
+        }
+        if self.underlined.is_some() {
+            map.serialize_entry("underlined", &self.underlined)?;
+        }
+        if self.strikethrough.is_some() {
+            map.serialize_entry("strikethrough", &self.strikethrough)?;
+        }
+        if self.obfuscated.is_some() {
+            map.serialize_entry("obfuscated", &self.obfuscated)?;
+        }
+        if self.color.is_some() {
+            if let Some(ChatColor::Custom(_)) = self.color {
+                if self.version >= 713 {
+                    map.serialize_entry("color", &self.color)?;
+                }
+            } else {
+                map.serialize_entry("color", &self.color)?;
+            }
+        }
+        if self.version >= 5 {
+            if self.insertion.is_some() {
+                map.serialize_entry("insertion", &self.insertion)?;
+            }
+            if self.version >= 713 {
+                if self.font.is_some() {
+                    map.serialize_entry("font", &self.font)?;
+                }
+            }
+        }
+        if self.click_event.is_some() {
+            if let Some(ClickEvent::CopyToClipBoard(_)) = self.click_event {
+                if self.version >= 558 {
+                    map.serialize_entry("clickEvent", &self.click_event)?;
+                }
+            } else {
+                map.serialize_entry("clickEvent", &self.click_event)?;
+            }
+        }
+        if self.hover_event.is_some() {
+            map.serialize_entry("hoverEvent", &self.hover_event)?;
+        }
+
+        map.end()
     }
 }
