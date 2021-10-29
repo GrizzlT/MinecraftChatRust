@@ -1,6 +1,6 @@
 [package]
 name = "mc_chat"
-version = "0.2.0-alpha"
+version = "0.3.0-alpha"
 edition = "2018"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/GrizzlT/MinecraftChatRust"
@@ -12,9 +12,9 @@ keywords = [ "parsing", "minecraft", "chat", "message", "format"]
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"], optional = true}
-erased-serde = { version = "0.3", optional = true}
+typetag = { version = "0.1", optional = true }
 serde_json = "1.0"
 
 [features]
 default = ["serde-support"]
-serde-support = [ "serde", "erased-serde" ]
+serde-support = [ "serde", "typetag" ]

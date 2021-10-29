@@ -1,316 +1,241 @@
-use crate::{ChatColor, ClickEvent, HoverEvent};
-
-/// The version number of the Minecraft protocol for 1.7
-pub const VERSION_1_7: i32 = 4;
-/// The version number of the Minecraft protocol for 1.8
-pub const VERSION_1_8: i32 = 47;
-/// The version number of the Minecraft protocol for 1.15
-pub const VERSION_1_15: i32 = 573;
-/// The version number of the Minecraft protocol for 1.16
-pub const VERSION_1_16: i32 = 735;
-
-///
-/// Represents a text object from minecraft that
-/// can be serialized and deserialized into a JSON-message
-/// suitable for sending across the minecraft protocol.
-/// (see [Wiki.vg](https://wiki.vg/Chat))
-#[cfg(feature = "serde-support")]
-pub trait Component: erased_serde::Serialize {
-    ///
-    /// Fetches the children of this component.
-    ///
-    /// This is equal to the `"extra"` element in the JSON format.
-    fn get_children<'a>(&'a self) -> &'a Vec<Box<dyn Component>>;
-
-    /// Gets the style component associated with this component.
-    fn get_style(&self) -> &ComponentStyle;
-
-    /// Gets the style component associated with this component.
-    fn get_style_mut(&mut self) -> &mut ComponentStyle;
-
-    ///
-    /// Adds a child to this component.
-    /// This will result in an addition to the `"extra"` element in the JSON format.
-    fn append(&mut self, child: Box<dyn Component>);
+pub struct ChatComponent {
+    kind: ComponentType,
+    siblings: Vec<ChatComponent>
 }
 
-///
-/// Represents a text object from minecraft that
-/// can be serialized and deserialized into a JSON-message
-/// suitable for sending across the minecraft protocol.
-/// (see [Wiki.vg](https://wiki.vg/Chat))
-#[cfg(not(feature = "serde-support"))]
-pub trait Component {
+/// The different kinds of components Minecraft chat messages
+/// can be made up of. One component (`storage`-component, since 1.15) is missing,
+/// further research and contributions on this would be appreciated!
+pub enum ComponentType {
+    Text(TextComponent),
+    Translation(TranslationComponent),
+    /// # Warning
+    /// Since **1.8**!
     ///
-    /// Fetches the children of this component.
+    /// This crate does not check any version,
+    /// it is up to the user to deal with this safely!
+    Score(ScoreComponent),
+    /// # Warning
+    /// Since **1.8** and **Client-To-Server** only!
     ///
-    /// This is equal to the `"extra"` element in the JSON format.
-    fn get_children<'a>(&'a self) -> &'a Vec<Box<dyn Component>>;
-
-    /// Gets the style component associated with this component.
-    fn get_style(&self) -> &ComponentStyle;
-
-    /// Gets the style component associated with this component.
-    fn get_style_mut(&mut self) -> &mut ComponentStyle;
-
+    /// This crate does not check these constraints,
+    /// it is up to the user to deal with this safely!
+    Selector(SelectorComponent),
+    /// # Warning
+    /// Since **1.12**!
     ///
-    /// Adds a child to this component.
-    /// This will result in an addition to the `"extra"` element in the JSON format.
-    fn append(&mut self, child: Box<dyn Component>);
+    /// This crate does not check any version,
+    /// it is up to the user to deal with this safely!
+    Keybind(KeybindComponent),
+    // TODO: research the `storage` component (since 1.15)
 }
 
-/// The central struct containing all style information about a [`Component`].
-pub struct ComponentStyle {
-    pub(crate) version: i32,
-    pub(crate) bold: Option<bool>,
-    pub(crate) italic: Option<bool>,
-    pub(crate) underlined: Option<bool>,
-    pub(crate) strikethrough: Option<bool>,
-    pub(crate) obfuscated: Option<bool>,
-    pub(crate) color: Option<crate::ChatColor>,
-    /// This field is ignored for versions older than 1.8
-    pub(crate) insertion: Option<String>,
-    /// This field is ignored for versions older than 1.16
-    pub(crate) font: Option<String>,
-    pub(crate) click_event: Option<crate::ClickEvent>,
-    pub(crate) hover_event: Option<crate::HoverEvent>,
-}
-
-pub trait ComponentStyleEditable {
-    fn color(&mut self, color: Option<ChatColor>);
-
-    fn color_if_absent(&mut self, color: ChatColor);
-
-    fn bold(&mut self, bold: bool);
-
-    fn italic(&mut self, italic: bool);
-
-    fn underlined(&mut self, underlined: bool);
-
-    fn strikethrough(&mut self, strikethrough: bool);
-
-    fn obfuscated(&mut self, obfuscated: bool);
-
-    fn font(&mut self, font: Option<String>);
-
-    fn insertion(&mut self, insertion: Option<String>);
-
-    fn click_event(&mut self, click_event: Option<ClickEvent>);
-
-    fn hover_event(&mut self, hover_event: Option<HoverEvent>);
-
-    fn get_color(&self) -> Option<&ChatColor>;
-
-    fn get_bold(&self) -> Option<bool>;
-
-    fn get_italic(&self) -> Option<bool>;
-
-    fn get_underlined(&self) -> Option<bool>;
-
-    fn get_strikethrough(&self) -> Option<bool>;
-
-    fn get_obfuscated(&self) -> Option<bool>;
-
-    fn get_font(&self) -> Option<&String>;
-
-    fn get_insertion(&self) -> Option<&String>;
-
-    fn get_click_event(&self) -> Option<&ClickEvent>;
-
-    fn get_hover_event(&self) -> Option<&HoverEvent>;
-
-    fn change_version(&mut self, to: i32);
-}
-
-impl ComponentStyle {
-    pub fn v1_7() -> ComponentStyle {
-        ComponentStyle {
-            version: 4,
-            bold: None,
-            italic: None,
-            underlined: None,
-            strikethrough: None,
-            obfuscated: None,
-            color: None,
-            insertion: None,
-            font: None,
-            click_event: None,
-            hover_event: None,
+impl ChatComponent {
+    pub fn from_component(kind: ComponentType) -> Self {
+        ChatComponent {
+            kind,
+            siblings: vec![]
         }
     }
 
-    pub fn v1_8() -> ComponentStyle {
-        ComponentStyle {
-            version: 47,
-            bold: None,
-            italic: None,
-            underlined: None,
-            strikethrough: None,
-            obfuscated: None,
-            color: None,
-            insertion: None,
-            font: None,
-            click_event: None,
-            hover_event: None,
+    pub fn from_text<T: Into<String>>(text: T) -> Self {
+        ChatComponent {
+            kind: ComponentType::Text(TextComponent::from_text(text)),
+            siblings: vec![]
         }
     }
 
-    pub fn v1_15() -> ComponentStyle {
-        ComponentStyle {
-            version: 573,
-            bold: None,
-            italic: None,
-            underlined: None,
-            strikethrough: None,
-            obfuscated: None,
-            color: None,
-            insertion: None,
-            font: None,
-            click_event: None,
-            hover_event: None,
+    pub fn from_key<T: Into<String>>(key: T) -> Self {
+        ChatComponent {
+            kind: ComponentType::Translation(TranslationComponent::from_key(key)),
+            siblings: vec![]
         }
     }
 
-    pub fn v1_16() -> ComponentStyle {
-        ComponentStyle {
-            version: 735,
-            bold: None,
-            italic: None,
-            underlined: None,
-            strikethrough: None,
-            obfuscated: None,
-            color: None,
-            insertion: None,
-            font: None,
-            click_event: None,
-            hover_event: None,
+    pub fn from_score<T: Into<String>, U: Into<String>>(name: T, objective: U) -> Self {
+        ChatComponent {
+            kind: ComponentType::Score(ScoreComponent::from_score(name, objective)),
+            siblings: vec![]
         }
     }
 
-    /// Assigns all fields except [`ComponentStyle::hover_event`] and [`ComponentStyle::click_event`]
-    /// to the values of the specified style.
-    pub fn apply_style(&mut self, style: &ComponentStyle) {
-        self.bold = style.bold;
-        self.italic = style.italic;
-        self.underlined = style.underlined;
-        self.strikethrough = style.strikethrough;
-        self.obfuscated = style.obfuscated;
-        self.color = style.color.clone();
-        self.insertion = style.insertion.clone();
-        self.font = style.insertion.clone();
+    pub fn from_selector<T: Into<String>>(selector: T) -> Self {
+        ChatComponent {
+            kind: ComponentType::Selector(SelectorComponent::from_selector(selector)),
+            siblings: vec![]
+        }
     }
 
-    /// Resets all fields to default (being [`None`]).
-    pub fn reset(&mut self) {
-        self.bold = None;
-        self.italic = None;
-        self.underlined = None;
-        self.strikethrough = None;
-        self.obfuscated = None;
-        self.color = None;
-        self.insertion = None;
-        self.font = None;
-        self.click_event = None;
-        self.hover_event = None;
+    pub fn from_keybind<T: Into<String>>(keybind: T) -> Self {
+        ChatComponent {
+            kind: ComponentType::Keybind(KeybindComponent::from_keybind(keybind)),
+            siblings: vec![]
+        }
     }
 }
 
-impl ComponentStyleEditable for ComponentStyle {
-    fn color(&mut self, color: Option<ChatColor>) {
-        self.color = color;
-    }
+pub struct TextComponent {
+    text: String
+}
 
-    fn color_if_absent(&mut self, color: ChatColor) {
-        if self.color.is_none() {
-            self.color = Some(color);
+impl TextComponent {
+    pub fn from_text<T: Into<String>>(text: T) -> Self {
+        TextComponent {
+            text: text.into()
         }
     }
 
-    fn bold(&mut self, bold: bool) {
-        self.bold = Some(bold);
+    pub fn get_text(&self) -> &String {
+        &self.text
     }
 
-    fn italic(&mut self, italic: bool) {
-        self.italic = Some(italic);
+    pub fn set_text<T: Into<String>>(&mut self, text: T) {
+        self.text = text.into()
     }
 
-    fn underlined(&mut self, underlined: bool) {
-        self.underlined = Some(underlined);
+    pub fn text<T: Into<String>>(mut self, text: T) -> Self {
+        self.set_text(text);
+        self
     }
+}
 
-    fn strikethrough(&mut self, strikethrough: bool) {
-        self.strikethrough = Some(strikethrough);
-    }
+pub struct TranslationComponent {
+    key: String,
+    with: Vec<ChatComponent>
+}
 
-    fn obfuscated(&mut self, obfuscated: bool) {
-        self.obfuscated = Some(obfuscated);
-    }
-
-    fn font(&mut self, font: Option<String>) {
-        self.font = font;
-    }
-
-    fn insertion(&mut self, insertion: Option<String>) {
-        self.insertion = insertion;
-    }
-
-    fn click_event(&mut self, click_event: Option<ClickEvent>) {
-        self.click_event = click_event;
-    }
-
-    fn hover_event(&mut self, hover_event: Option<HoverEvent>) {
-        self.hover_event = hover_event;
-    }
-
-    fn get_color(&self) -> Option<&ChatColor> {
-        self.color.as_ref()
-    }
-
-    fn get_bold(&self) -> Option<bool> {
-        self.bold
-    }
-
-    fn get_italic(&self) -> Option<bool> {
-        self.italic
-    }
-
-    fn get_underlined(&self) -> Option<bool> {
-        self.underlined
-    }
-
-    fn get_strikethrough(&self) -> Option<bool> {
-        self.strikethrough
-    }
-
-    fn get_obfuscated(&self) -> Option<bool> {
-        self.obfuscated
-    }
-
-    fn get_font(&self) -> Option<&String> {
-        if self.version >= 713 {
-            self.font.as_ref()
-        } else {
-            None
+impl TranslationComponent {
+    pub fn from_key<T: Into<String>>(key: T) -> Self {
+        TranslationComponent {
+            key: key.into(),
+            with: vec![]
         }
     }
 
-    fn get_insertion(&self) -> Option<&String> {
-        if self.version >= 5 {
-            self.insertion.as_ref()
-        } else {
-            None
+    pub fn get_key(&self) -> &String {
+        &self.key
+    }
+
+    pub fn set_key<T: Into<String>>(&mut self, key: T) {
+        self.key = key.into()
+    }
+
+    pub fn key<T: Into<String>>(mut self, key: T) -> Self {
+        self.set_key(key);
+        self
+    }
+
+    pub fn add_arg(&mut self, component: ChatComponent) {
+        self.with.push(component)
+    }
+
+    pub fn argument(mut self, component: ChatComponent) -> Self {
+        self.add_arg(component);
+        self
+    }
+}
+
+pub struct ScoreComponent {
+    name: String,
+    objective: String,
+    value: Option<String>
+}
+
+impl ScoreComponent {
+    pub fn from_score<T: Into<String>, U: Into<String>>(name: T, objective: U) -> Self {
+        ScoreComponent {
+            name: name.into(),
+            objective: objective.into(),
+            value: None
         }
     }
 
-    fn get_click_event(&self) -> Option<&ClickEvent> {
-        self.click_event.as_ref()
+    pub fn get_name(&self) -> &String {
+        &self.name
     }
 
-    fn get_hover_event(&self) -> Option<&HoverEvent> {
-        self.hover_event.as_ref()
+    pub fn set_name<T: Into<String>>(&mut self, name: T) {
+        self.name = name.into()
     }
 
-    fn change_version(&mut self, to: i32) {
-        self.version = to;
+    pub fn name<T: Into<String>>(mut self, name: T) -> Self{
+        self.set_name(name);
+        self
+    }
+
+    pub fn get_objective(&self) -> &String {
+        &self.objective
+    }
+
+    pub fn set_objective<T: Into<String>>(&mut self, objective: T) {
+        self.objective = objective.into()
+    }
+
+    pub fn objective<T: Into<String>>(mut self, objective: T) -> Self {
+        self.set_objective(objective);
+        self
+    }
+
+    pub fn get_value(&self) -> Option<&String> {
+        self.value.as_ref()
+    }
+
+    pub fn set_value<T: Into<String>>(&mut self, value: Option<T>) {
+        self.value = value.map(|value| value.into());
+    }
+
+    pub fn value<T: Into<String>>(mut self, value: Option<T>) -> Self {
+        self.set_value(value);
+        self
+    }
+}
+
+pub struct SelectorComponent {
+    selector: String
+}
+
+impl SelectorComponent {
+    pub fn from_selector<T: Into<String>>(selector: T) -> Self {
+        SelectorComponent {
+            selector: selector.into()
+        }
+    }
+
+    pub fn get_selector(&self) -> &String {
+        &self.selector
+    }
+
+    pub fn set_selector<T: Into<String>>(&mut self, selector: T) {
+        self.selector = selector.into()
+    }
+
+    pub fn selector<T: Into<String>>(mut self, selector: T) -> Self {
+        self.set_selector(selector);
+        self
+    }
+}
+
+pub struct KeybindComponent {
+    keybind: String
+}
+
+impl KeybindComponent {
+    pub fn from_keybind<T: Into<String>>(keybind: T) -> Self {
+        KeybindComponent {
+            keybind: keybind.into()
+        }
+    }
+
+    pub fn get_keybind(&self) -> &String {
+        &self.keybind
+    }
+
+    pub fn set_keybind<T: Into<String>>(&mut self, keybind: T) {
+        self.keybind = keybind.into()
+    }
+
+    pub fn keybind<T: Into<String>>(mut self, keybind: T) -> Self {
+        self.set_keybind(keybind);
+        self
     }
 }
