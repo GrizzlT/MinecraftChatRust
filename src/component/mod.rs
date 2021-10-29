@@ -1,38 +1,20 @@
+use std::ops::{Deref, DerefMut};
 use crate::style::ComponentStyle;
 
-#[derive(Clone)]
-pub struct ChatComponent {
-    kind: ComponentType,
-    style: ComponentStyle,
-    siblings: Vec<ChatComponent>
-}
+#[cfg(feature = "serde-support")]
+use serde::Serialize;
+#[cfg(feature = "serde-support")]
+mod serde_support;
 
-/// The different kinds of components Minecraft chat messages
-/// can be made up of. One component (`storage`-component, since 1.15) is missing,
-/// further research and contributions on this would be appreciated!
 #[derive(Clone)]
-pub enum ComponentType {
-    Text(TextComponent),
-    Translation(TranslationComponent),
-    /// # Warning
-    /// Since **1.8**!
-    ///
-    /// This crate does not check any version,
-    /// it is up to the user to deal with this safely!
-    Score(ScoreComponent),
-    /// # Warning
-    /// Since **1.8** and **Client-To-Server** only!
-    ///
-    /// This crate does not check these constraints,
-    /// it is up to the user to deal with this safely!
-    Selector(SelectorComponent),
-    /// # Warning
-    /// Since **1.12**!
-    ///
-    /// This crate does not check any version,
-    /// it is up to the user to deal with this safely!
-    Keybind(KeybindComponent),
-    // TODO: research the `storage` component (since 1.15)
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
+pub struct ChatComponent {
+    #[cfg_attr(feature = "serde-support", serde(flatten))]
+    kind: ComponentType,
+    #[cfg_attr(feature = "serde-support", serde(flatten))]
+    style: ComponentStyle,
+    #[cfg_attr(feature = "serde-support", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
+    siblings: Vec<ChatComponent>
 }
 
 impl ChatComponent {
@@ -83,9 +65,78 @@ impl ChatComponent {
             siblings: vec![]
         }
     }
+
+    pub fn get_kind(&self) -> &ComponentType {
+        &self.kind
+    }
+
+    pub fn get_kind_mut(&mut self) -> &mut ComponentType {
+        &mut self.kind
+    }
+
+    pub fn get_style(&self) -> &ComponentStyle {
+        &self.style
+    }
+
+    pub fn get_style_mut(&mut self) -> &mut ComponentStyle {
+        &mut self.style
+    }
+
+    pub fn get_siblings(&self) -> &Vec<ChatComponent> {
+        &self.siblings
+    }
+
+    pub fn get_siblings_mut(&mut self) -> &mut Vec<ChatComponent> {
+        &mut self.siblings
+    }
+}
+
+impl Deref for ChatComponent {
+    type Target = ComponentStyle;
+
+    fn deref(&self) -> &Self::Target {
+        &self.style
+    }
+}
+
+impl DerefMut for ChatComponent {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.style
+    }
+}
+
+/// The different kinds of components Minecraft chat messages
+/// can be made up of. One component (`storage`-component, since 1.15) is missing,
+/// further research and contributions on this would be appreciated!
+#[derive(Clone)]
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
+#[cfg_attr(feature = "serde-support", serde(untagged))]
+pub enum ComponentType {
+    Text(TextComponent),
+    Translation(TranslationComponent),
+    /// # Warning
+    /// Since **1.8**!
+    ///
+    /// This crate does not check any version,
+    /// it is up to the user to deal with this safely!
+    Score(ScoreComponent),
+    /// # Warning
+    /// Since **1.8** and **Client-To-Server** only!
+    ///
+    /// This crate does not check these constraints,
+    /// it is up to the user to deal with this safely!
+    Selector(SelectorComponent),
+    /// # Warning
+    /// Since **1.12**!
+    ///
+    /// This crate does not check any version,
+    /// it is up to the user to deal with this safely!
+    Keybind(KeybindComponent),
+    // TODO: research the `storage` component (since 1.15)
 }
 
 #[derive(Clone)]
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
 pub struct TextComponent {
     text: String
 }
@@ -112,7 +163,9 @@ impl TextComponent {
 }
 
 #[derive(Clone)]
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
 pub struct TranslationComponent {
+    #[cfg_attr(feature = "serde-support", serde(rename = "translate"))]
     key: String,
     with: Vec<ChatComponent>
 }
@@ -149,9 +202,11 @@ impl TranslationComponent {
 }
 
 #[derive(Clone)]
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
 pub struct ScoreComponent {
     name: String,
     objective: String,
+    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
     value: Option<String>
 }
 
@@ -205,6 +260,7 @@ impl ScoreComponent {
 }
 
 #[derive(Clone)]
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
 pub struct SelectorComponent {
     selector: String
 }
@@ -231,6 +287,7 @@ impl SelectorComponent {
 }
 
 #[derive(Clone)]
+#[cfg_attr(feature = "serde-support", derive(Serialize))]
 pub struct KeybindComponent {
     keybind: String
 }

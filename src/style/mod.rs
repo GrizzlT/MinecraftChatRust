@@ -3,6 +3,15 @@ use crate::component::ChatComponent;
 #[cfg(feature = "serde-support")]
 mod serde_support;
 
+/// The version number of the Minecraft protocol for 1.7
+pub const VERSION_1_7: u32 = 4;
+/// The version number of the Minecraft protocol for 1.8
+pub const VERSION_1_8: u32 = 47;
+/// The version number of the Minecraft protocol for 1.15
+pub const VERSION_1_15: u32 = 573;
+/// The version number of the Minecraft protocol for 1.16
+pub const VERSION_1_16: u32 = 735;
+
 /// The style of a [`ChatComponent`]
 #[derive(Clone)]
 pub struct ComponentStyle {
@@ -59,7 +68,7 @@ impl ComponentStyle {
     }
 
     pub fn color(mut self, color: Option<ChatColor>) -> Self {
-        self.color = color;
+        self.set_color(color);
         self
     }
 
@@ -70,9 +79,7 @@ impl ComponentStyle {
     }
 
     pub fn color_if_absent(mut self, color: ChatColor) -> Self {
-        if self.color.is_none() {
-            self.color = Some(color);
-        }
+        self.set_color_if_absent(color);
         self
     }
 
@@ -81,7 +88,7 @@ impl ComponentStyle {
     }
 
     pub fn bold(mut self, bold: bool) -> Self {
-        self.bold = Some(bold);
+        self.set_bold(bold);
         self
     }
 
@@ -90,7 +97,7 @@ impl ComponentStyle {
     }
 
     pub fn italic(mut self, italic: bool) -> Self {
-        self.italic = Some(italic);
+        self.set_italic(italic);
         self
     }
 
@@ -99,7 +106,7 @@ impl ComponentStyle {
     }
 
     pub fn underlined(mut self, underlined: bool) -> Self {
-        self.underlined = Some(underlined);
+        self.set_underlined(underlined);
         self
     }
 
@@ -108,7 +115,7 @@ impl ComponentStyle {
     }
 
     pub fn strikethrough(mut self, strikethrough: bool) -> Self {
-        self.strikethrough = Some(strikethrough);
+        self.set_strikethrough(strikethrough);
         self
     }
 
@@ -117,25 +124,25 @@ impl ComponentStyle {
     }
 
     pub fn obfuscated(mut self, obfuscated: bool) -> Self {
-        self.obfuscated = Some(obfuscated);
+        self.set_obfuscated(obfuscated);
         self
     }
 
-    pub fn set_font(&mut self, font: Option<String>) {
-        self.font = font;
+    pub fn set_font<T: Into<String>>(&mut self, font: Option<T>) {
+        self.font = font.map(|font| font.into());
     }
 
-    pub fn font(mut self, font: Option<String>) -> Self {
-        self.font = font;
+    pub fn font<T: Into<String>>(mut self, font: Option<T>) -> Self {
+        self.set_font(font);
         self
     }
 
-    pub fn set_insertion(&mut self, insertion: Option<String>) {
-        self.insertion = insertion;
+    pub fn set_insertion<T: Into<String>>(&mut self, insertion: Option<T>) {
+        self.insertion = insertion.map(|insertion| insertion.into());
     }
 
-    pub fn insertion(mut self, insertion: Option<String>) -> Self {
-        self.insertion = insertion;
+    pub fn insertion<T: Into<String>>(mut self, insertion: Option<T>) -> Self {
+        self.set_insertion(insertion);
         self
     }
 
@@ -144,7 +151,7 @@ impl ComponentStyle {
     }
 
     pub fn click_event(mut self, click_event: Option<ClickEvent>) -> Self {
-        self.click_event = click_event;
+        self.set_click_event(click_event);
         self
     }
 
@@ -153,7 +160,7 @@ impl ComponentStyle {
     }
 
     pub fn hover_event(mut self, hover_event: Option<HoverEvent>) -> Self {
-        self.hover_event = hover_event;
+        self.set_hover_event(hover_event);
         self
     }
 
@@ -246,8 +253,16 @@ pub enum ChatColor {
     Yellow,
     White,
     /// This field is ignored for versions older than 1.16.
+    ///
+    /// See [`ChatColor::custom()`].
     Custom(String),
     Reset,
+}
+
+impl ChatColor {
+    pub fn custom<T: Into<String>>(color: T) -> ChatColor {
+        ChatColor::Custom(color.into())
+    }
 }
 
 /// A ClickEvent useful in a chat message or book.
@@ -261,9 +276,32 @@ pub enum ClickEvent {
     CopyToClipBoard(String),
 }
 
+impl ClickEvent {
+    pub fn url<T: Into<String>>(url: T) -> Self {
+        Self::OpenUrl(url.into())
+    }
+
+    pub fn run_command<T: Into<String>>(cmd: T) -> Self {
+        Self::RunCommand(cmd.into())
+    }
+
+    pub fn suggest_command<T: Into<String>>(cmd: T) -> Self {
+        Self::SuggestCommand(cmd.into())
+    }
+
+    pub fn page<T: Into<u32>>(page: T) -> Self {
+        Self::ChangePage(page.into())
+    }
+
+    pub fn clipboard<T: Into<String>>(str: T) -> Self {
+        Self::CopyToClipBoard(str.into())
+    }
+}
+
 /// A HoverEvent useful in a chat message or book.
 /// ## TODO
-/// Change 'value' field to 'contents' when serializing for 1.16+
+/// Change 'value' field to 'contents' when serializing for 1.16+,
+/// also add more sophisticated `item` and `entity` data structures
 #[derive(Clone)]
 pub enum HoverEvent {
     ShowText(Box<ChatComponent>),
