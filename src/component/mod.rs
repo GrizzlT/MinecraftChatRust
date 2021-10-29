@@ -1,11 +1,16 @@
+use crate::style::ComponentStyle;
+
+#[derive(Clone)]
 pub struct ChatComponent {
     kind: ComponentType,
+    style: ComponentStyle,
     siblings: Vec<ChatComponent>
 }
 
 /// The different kinds of components Minecraft chat messages
 /// can be made up of. One component (`storage`-component, since 1.15) is missing,
 /// further research and contributions on this would be appreciated!
+#[derive(Clone)]
 pub enum ComponentType {
     Text(TextComponent),
     Translation(TranslationComponent),
@@ -31,49 +36,56 @@ pub enum ComponentType {
 }
 
 impl ChatComponent {
-    pub fn from_component(kind: ComponentType) -> Self {
+    pub fn from_component(kind: ComponentType, style: ComponentStyle) -> Self {
         ChatComponent {
             kind,
+            style,
             siblings: vec![]
         }
     }
 
-    pub fn from_text<T: Into<String>>(text: T) -> Self {
+    pub fn from_text<T: Into<String>>(text: T, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Text(TextComponent::from_text(text)),
+            style,
             siblings: vec![]
         }
     }
 
-    pub fn from_key<T: Into<String>>(key: T) -> Self {
+    pub fn from_key<T: Into<String>>(key: T, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Translation(TranslationComponent::from_key(key)),
+            style,
             siblings: vec![]
         }
     }
 
-    pub fn from_score<T: Into<String>, U: Into<String>>(name: T, objective: U) -> Self {
+    pub fn from_score<T: Into<String>, U: Into<String>>(name: T, objective: U, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Score(ScoreComponent::from_score(name, objective)),
+            style,
             siblings: vec![]
         }
     }
 
-    pub fn from_selector<T: Into<String>>(selector: T) -> Self {
+    pub fn from_selector<T: Into<String>>(selector: T, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Selector(SelectorComponent::from_selector(selector)),
+            style,
             siblings: vec![]
         }
     }
 
-    pub fn from_keybind<T: Into<String>>(keybind: T) -> Self {
+    pub fn from_keybind<T: Into<String>>(keybind: T, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Keybind(KeybindComponent::from_keybind(keybind)),
+            style,
             siblings: vec![]
         }
     }
 }
 
+#[derive(Clone)]
 pub struct TextComponent {
     text: String
 }
@@ -99,6 +111,7 @@ impl TextComponent {
     }
 }
 
+#[derive(Clone)]
 pub struct TranslationComponent {
     key: String,
     with: Vec<ChatComponent>
@@ -135,6 +148,7 @@ impl TranslationComponent {
     }
 }
 
+#[derive(Clone)]
 pub struct ScoreComponent {
     name: String,
     objective: String,
@@ -190,6 +204,7 @@ impl ScoreComponent {
     }
 }
 
+#[derive(Clone)]
 pub struct SelectorComponent {
     selector: String
 }
@@ -215,6 +230,7 @@ impl SelectorComponent {
     }
 }
 
+#[derive(Clone)]
 pub struct KeybindComponent {
     keybind: String
 }
