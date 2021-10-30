@@ -9,9 +9,9 @@ Serialization and Deserialization is done using [serde](https://serde.rs) (such 
 Using a version indication, different styles are automatically ignored for older versions.
 
 ### Goals
-- [x] Serialization/Deserialization to json.
-- [] Complete missing elements.
-- [] Add a 'legacy' text format.
+- [x] Serialization/Deserialization to json possible.
+- [ ] Complete missing elements.
+- [ ] Add a 'legacy' text format.
 
 ### Contributing
 Please feel free to contribute to this repository. Any help is welcome!
