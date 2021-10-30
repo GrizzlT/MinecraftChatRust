@@ -1,3 +1,12 @@
+//!
+//! This crate provides Rust objects that map to the minecraft
+//! protocol raw JSON message format used for chat messages, books, titles...
+//!
+//! Serialization and Deserialization is implemented using serde. We plan on implementing legacy text soon!
+//!
+//! Please check out our [github](https://github.com/GrizzlT/MinecraftChatRust) and
+//! feel free to contribute.
+
 mod component;
 mod style;
 
