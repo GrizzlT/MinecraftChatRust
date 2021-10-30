@@ -1,8 +1,8 @@
 use crate::component::ChatComponent;
 
-#[cfg(feature = "serde-support")]
+#[cfg(feature = "serde")]
 use serde::Deserialize;
-#[cfg(feature = "serde-support")]
+#[cfg(feature = "serde")]
 mod serde_support;
 
 /// The version number of the Minecraft protocol for 1.7
@@ -16,27 +16,27 @@ pub const VERSION_1_16: u32 = 735;
 
 /// The style of a [`ChatComponent`]
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct ComponentStyle {
     #[cfg_attr(
-        feature = "serde-support",
+        feature = "serde",
         serde(skip, default = "serde_support::default_style_version")
     )]
-    pub(crate) version: u32,
-    pub(crate) bold: Option<bool>,
-    pub(crate) italic: Option<bool>,
-    pub(crate) underlined: Option<bool>,
-    pub(crate) strikethrough: Option<bool>,
-    pub(crate) obfuscated: Option<bool>,
-    pub(crate) color: Option<ChatColor>,
+    version: u32,
+    bold: Option<bool>,
+    italic: Option<bool>,
+    underlined: Option<bool>,
+    strikethrough: Option<bool>,
+    obfuscated: Option<bool>,
+    color: Option<ChatColor>,
     /// This field is ignored for versions older than 1.8
-    pub(crate) insertion: Option<String>,
+    insertion: Option<String>,
     /// This field is ignored for versions older than 1.16
-    pub(crate) font: Option<String>,
-    #[cfg_attr(feature = "serde-support", serde(rename = "clickEvent"))]
-    pub(crate) click_event: Option<ClickEvent>,
-    #[cfg_attr(feature = "serde-support", serde(rename = "hoverEvent"))]
-    pub(crate) hover_event: Option<HoverEvent>,
+    font: Option<String>,
+    #[cfg_attr(feature = "serde", serde(rename = "clickEvent"))]
+    click_event: Option<ClickEvent>,
+    #[cfg_attr(feature = "serde", serde(rename = "hoverEvent"))]
+    hover_event: Option<HoverEvent>,
 }
 
 impl ComponentStyle {
@@ -276,11 +276,8 @@ impl ChatColor {
 
 /// A ClickEvent useful in a chat message or book.
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize))]
-#[cfg_attr(
-    feature = "serde-support",
-    serde(try_from = "serde_support::ClickEventData")
-)]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "serde_support::ClickEventData"))]
 pub enum ClickEvent {
     OpenUrl(String),
     RunCommand(String),
@@ -317,11 +314,8 @@ impl ClickEvent {
 /// Change 'value' field to 'contents' when serializing for 1.16+,
 /// also add more sophisticated `item` and `entity` data structures
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Deserialize))]
-#[cfg_attr(
-    feature = "serde-support",
-    serde(try_from = "serde_support::HoverEventData")
-)]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
+#[cfg_attr(feature = "serde", serde(try_from = "serde_support::HoverEventData"))]
 pub enum HoverEvent {
     ShowText(Box<ChatComponent>),
     ShowItem(String),

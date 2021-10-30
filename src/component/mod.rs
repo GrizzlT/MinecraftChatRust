@@ -1,18 +1,18 @@
 use crate::style::ComponentStyle;
 use std::ops::{Deref, DerefMut};
 
-#[cfg(feature = "serde-support")]
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ChatComponent {
-    #[cfg_attr(feature = "serde-support", serde(flatten))]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     kind: ComponentType,
-    #[cfg_attr(feature = "serde-support", serde(flatten))]
+    #[cfg_attr(feature = "serde", serde(flatten))]
     style: ComponentStyle,
     #[cfg_attr(
-        feature = "serde-support",
+        feature = "serde",
         serde(rename = "extra", skip_serializing_if = "Vec::is_empty", default)
     )]
     siblings: Vec<ChatComponent>,
@@ -114,8 +114,8 @@ impl DerefMut for ChatComponent {
 /// can be made up of. One component (`storage`-component, since 1.15) is missing,
 /// further research and contributions on this would be appreciated!
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "serde-support", serde(untagged))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(untagged))]
 pub enum ComponentType {
     Text(TextComponent),
     Translation(TranslationComponent),
@@ -141,7 +141,7 @@ pub enum ComponentType {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TextComponent {
     text: String,
 }
@@ -166,9 +166,9 @@ impl TextComponent {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TranslationComponent {
-    #[cfg_attr(feature = "serde-support", serde(rename = "translate"))]
+    #[cfg_attr(feature = "serde", serde(rename = "translate"))]
     key: String,
     with: Vec<ChatComponent>,
 }
@@ -205,14 +205,11 @@ impl TranslationComponent {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ScoreComponent {
     name: String,
     objective: String,
-    #[cfg_attr(
-        feature = "serde-support",
-        serde(skip_serializing_if = "Option::is_none")
-    )]
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     value: Option<String>,
 }
 
@@ -266,7 +263,7 @@ impl ScoreComponent {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SelectorComponent {
     selector: String,
 }
@@ -293,7 +290,7 @@ impl SelectorComponent {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct KeybindComponent {
     keybind: String,
 }
