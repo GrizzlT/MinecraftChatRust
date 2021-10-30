@@ -1,4 +1,6 @@
 # Minecraft Chat Rust
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FGrizzlT%2FMinecraftChatRust.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FGrizzlT%2FMinecraftChatRust?ref=badge_shield)
+
 
 [![Latest Version](https://img.shields.io/crates/v/mc_chat)](https://crates.io/crates/mc_chat)
 
@@ -36,3 +38,7 @@ Please feel free to contribute to this repository. Any help is welcome!
 
 (I'm also pretty sure there are some people out there who know how to improve this crate by a bunch,
 so any advice is appreciated!)
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FGrizzlT%2FMinecraftChatRust.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2FGrizzlT%2FMinecraftChatRust?ref=badge_large)
