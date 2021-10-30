@@ -12,6 +12,7 @@ Using a version indication, different styles are automatically ignored for older
 - [x] Serialization/Deserialization to json possible.
 - [ ] Complete missing elements.
 - [ ] Add a 'legacy' text format.
+- [ ] Better documentation.
 
 ### Contributing
 Please feel free to contribute to this repository. Any help is welcome!
