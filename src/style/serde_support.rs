@@ -1,9 +1,17 @@
-use serde::{Serialize, Serializer};
+use std::convert::TryFrom;
+use std::fmt::{Display, Formatter};
+
+use crate::component::ChatComponent;
 use serde::ser::{SerializeMap, SerializeStruct};
-use crate::style::{ChatColor, ClickEvent, ComponentStyle, HoverEvent};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use crate::style::{ChatColor, ClickEvent, ComponentStyle, HoverEvent, VERSION_1_16};
 
 impl Serialize for ChatColor {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
         serializer.serialize_str(match self {
             ChatColor::Black => "black",
             ChatColor::DarkBlue => "dark_blue",
@@ -27,10 +35,39 @@ impl Serialize for ChatColor {
     }
 }
 
+impl<'de> Deserialize<'de> for ChatColor {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let input = String::deserialize(deserializer)?;
+        Ok(match input.as_str() {
+            "black" => ChatColor::Black,
+            "dark_blue" => ChatColor::DarkBlue,
+            "dark_green" => ChatColor::DarkGreen,
+            "dark_aqua" => ChatColor::DarkCyan,
+            "dark_red" => ChatColor::DarkRed,
+            "dark_purple" => ChatColor::Purple,
+            "gold" => ChatColor::Gold,
+            "gray" => ChatColor::Gray,
+            "dark_gray" => ChatColor::DarkGray,
+            "blue" => ChatColor::Blue,
+            "green" => ChatColor::Green,
+            "aqua" => ChatColor::Cyan,
+            "red" => ChatColor::Red,
+            "light_purple" => ChatColor::Pink,
+            "yellow" => ChatColor::Yellow,
+            "white" => ChatColor::White,
+            "reset" => ChatColor::Reset,
+            _ => ChatColor::Custom(input),
+        })
+    }
+}
+
 impl Serialize for ClickEvent {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut item = serializer.serialize_struct("clickEvent", 2)?;
         match self {
@@ -59,11 +96,64 @@ impl Serialize for ClickEvent {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum ClickEventType {
+    String(String),
+    U32(u32),
+}
+
+#[derive(Deserialize)]
+pub(crate) struct ClickEventData {
+    action: String,
+    value: ClickEventType,
+}
+
+pub enum ClickEventDeserializeErr {
+    WrongKey(String),
+    NoValuFound(String),
+}
+
+impl Display for ClickEventDeserializeErr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ClickEventDeserializeErr::WrongKey(str) => write!(f, "{} is not a valid action!", str),
+            ClickEventDeserializeErr::NoValuFound(key) => write!(f, "No value found for {}", key),
+        }
+    }
+}
+
+impl TryFrom<ClickEventData> for ClickEvent {
+    type Error = ClickEventDeserializeErr;
+
+    fn try_from(data: ClickEventData) -> Result<Self, Self::Error> {
+        if data.action.as_str() == "change_page" {
+            if let ClickEventType::U32(value) = data.value {
+                Ok(ClickEvent::ChangePage(value))
+            } else {
+                Err(ClickEventDeserializeErr::NoValuFound(data.action))
+            }
+        } else {
+            if let ClickEventType::String(str) = data.value {
+                match data.action.as_str() {
+                    "open_url" => Ok(ClickEvent::OpenUrl(str)),
+                    "run_command" => Ok(ClickEvent::RunCommand(str)),
+                    "suggest_command" => Ok(ClickEvent::SuggestCommand(str)),
+                    "copy_to_clipboard" => Ok(ClickEvent::CopyToClipBoard(str)),
+                    _ => Err(ClickEventDeserializeErr::WrongKey(str)),
+                }
+            } else {
+                Err(ClickEventDeserializeErr::WrongKey(data.action))
+            }
+        }
+    }
+}
+
 /// TODO: change serialization to `contents` instead of `value`
 impl Serialize for HoverEvent {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut event = serializer.serialize_struct("hoverEvent", 2)?;
         match self {
@@ -84,10 +174,63 @@ impl Serialize for HoverEvent {
     }
 }
 
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum HoverEventType {
+    String(String),
+    Chat(ChatComponent),
+}
+
+#[derive(Deserialize)]
+pub(crate) struct HoverEventData {
+    action: String,
+    value: HoverEventType,
+}
+
+pub enum HoverEventDeserializeErr {
+    WrongKey(String),
+    NoValueFound(String),
+}
+
+impl Display for HoverEventDeserializeErr {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HoverEventDeserializeErr::WrongKey(str) => write!(f, "{} is not a valid action!", str),
+            HoverEventDeserializeErr::NoValueFound(key) => {
+                write!(f, "Couldn't find appropriate value for {}", key)
+            }
+        }
+    }
+}
+
+impl TryFrom<HoverEventData> for HoverEvent {
+    type Error = HoverEventDeserializeErr;
+
+    fn try_from(data: HoverEventData) -> Result<Self, Self::Error> {
+        if data.action.as_str() == "show_text" {
+            if let HoverEventType::Chat(component) = data.value {
+                Ok(HoverEvent::ShowText(Box::new(component)))
+            } else {
+                Err(HoverEventDeserializeErr::NoValueFound(data.action))
+            }
+        } else {
+            if let HoverEventType::String(str) = data.value {
+                match data.action.as_str() {
+                    "show_item" => Ok(HoverEvent::ShowItem(str)),
+                    "show_entity" => Ok(HoverEvent::ShowEntity(str)),
+                    _ => Err(HoverEventDeserializeErr::WrongKey(str)),
+                }
+            } else {
+                Err(HoverEventDeserializeErr::WrongKey(data.action))
+            }
+        }
+    }
+}
+
 impl Serialize for ComponentStyle {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let mut map = serializer.serialize_map(None)?;
         if self.bold.is_some() {
@@ -139,4 +282,8 @@ impl Serialize for ComponentStyle {
 
         map.end()
     }
+}
+
+pub(crate) fn default_style_version() -> u32 {
+    VERSION_1_16
 }

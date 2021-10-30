@@ -1,20 +1,21 @@
-use std::ops::{Deref, DerefMut};
 use crate::style::ComponentStyle;
+use std::ops::{Deref, DerefMut};
 
 #[cfg(feature = "serde-support")]
-use serde::Serialize;
-#[cfg(feature = "serde-support")]
-mod serde_support;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize))]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct ChatComponent {
     #[cfg_attr(feature = "serde-support", serde(flatten))]
     kind: ComponentType,
     #[cfg_attr(feature = "serde-support", serde(flatten))]
     style: ComponentStyle,
-    #[cfg_attr(feature = "serde-support", serde(rename = "extra", skip_serializing_if = "Vec::is_empty"))]
-    siblings: Vec<ChatComponent>
+    #[cfg_attr(
+        feature = "serde-support",
+        serde(rename = "extra", skip_serializing_if = "Vec::is_empty", default)
+    )]
+    siblings: Vec<ChatComponent>,
 }
 
 impl ChatComponent {
@@ -22,7 +23,7 @@ impl ChatComponent {
         ChatComponent {
             kind,
             style,
-            siblings: vec![]
+            siblings: vec![],
         }
     }
 
@@ -30,7 +31,7 @@ impl ChatComponent {
         ChatComponent {
             kind: ComponentType::Text(TextComponent::from_text(text)),
             style,
-            siblings: vec![]
+            siblings: vec![],
         }
     }
 
@@ -38,15 +39,19 @@ impl ChatComponent {
         ChatComponent {
             kind: ComponentType::Translation(TranslationComponent::from_key(key)),
             style,
-            siblings: vec![]
+            siblings: vec![],
         }
     }
 
-    pub fn from_score<T: Into<String>, U: Into<String>>(name: T, objective: U, style: ComponentStyle) -> Self {
+    pub fn from_score<T: Into<String>, U: Into<String>>(
+        name: T,
+        objective: U,
+        style: ComponentStyle,
+    ) -> Self {
         ChatComponent {
             kind: ComponentType::Score(ScoreComponent::from_score(name, objective)),
             style,
-            siblings: vec![]
+            siblings: vec![],
         }
     }
 
@@ -54,7 +59,7 @@ impl ChatComponent {
         ChatComponent {
             kind: ComponentType::Selector(SelectorComponent::from_selector(selector)),
             style,
-            siblings: vec![]
+            siblings: vec![],
         }
     }
 
@@ -62,7 +67,7 @@ impl ChatComponent {
         ChatComponent {
             kind: ComponentType::Keybind(KeybindComponent::from_keybind(keybind)),
             style,
-            siblings: vec![]
+            siblings: vec![],
         }
     }
 
@@ -108,8 +113,8 @@ impl DerefMut for ChatComponent {
 /// The different kinds of components Minecraft chat messages
 /// can be made up of. One component (`storage`-component, since 1.15) is missing,
 /// further research and contributions on this would be appreciated!
-#[derive(Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize))]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde-support", serde(untagged))]
 pub enum ComponentType {
     Text(TextComponent),
@@ -135,17 +140,15 @@ pub enum ComponentType {
     // TODO: research the `storage` component (since 1.15)
 }
 
-#[derive(Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize))]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct TextComponent {
-    text: String
+    text: String,
 }
 
 impl TextComponent {
     pub fn from_text<T: Into<String>>(text: T) -> Self {
-        TextComponent {
-            text: text.into()
-        }
+        TextComponent { text: text.into() }
     }
 
     pub fn get_text(&self) -> &String {
@@ -162,19 +165,19 @@ impl TextComponent {
     }
 }
 
-#[derive(Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize))]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct TranslationComponent {
     #[cfg_attr(feature = "serde-support", serde(rename = "translate"))]
     key: String,
-    with: Vec<ChatComponent>
+    with: Vec<ChatComponent>,
 }
 
 impl TranslationComponent {
     pub fn from_key<T: Into<String>>(key: T) -> Self {
         TranslationComponent {
             key: key.into(),
-            with: vec![]
+            with: vec![],
         }
     }
 
@@ -201,13 +204,16 @@ impl TranslationComponent {
     }
 }
 
-#[derive(Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize))]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct ScoreComponent {
     name: String,
     objective: String,
-    #[cfg_attr(feature = "serde-support", serde(skip_serializing_if = "Option::is_none"))]
-    value: Option<String>
+    #[cfg_attr(
+        feature = "serde-support",
+        serde(skip_serializing_if = "Option::is_none")
+    )]
+    value: Option<String>,
 }
 
 impl ScoreComponent {
@@ -215,7 +221,7 @@ impl ScoreComponent {
         ScoreComponent {
             name: name.into(),
             objective: objective.into(),
-            value: None
+            value: None,
         }
     }
 
@@ -227,7 +233,7 @@ impl ScoreComponent {
         self.name = name.into()
     }
 
-    pub fn name<T: Into<String>>(mut self, name: T) -> Self{
+    pub fn name<T: Into<String>>(mut self, name: T) -> Self {
         self.set_name(name);
         self
     }
@@ -259,16 +265,16 @@ impl ScoreComponent {
     }
 }
 
-#[derive(Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize))]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct SelectorComponent {
-    selector: String
+    selector: String,
 }
 
 impl SelectorComponent {
     pub fn from_selector<T: Into<String>>(selector: T) -> Self {
         SelectorComponent {
-            selector: selector.into()
+            selector: selector.into(),
         }
     }
 
@@ -286,16 +292,16 @@ impl SelectorComponent {
     }
 }
 
-#[derive(Clone)]
-#[cfg_attr(feature = "serde-support", derive(Serialize))]
+#[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde-support", derive(Serialize, Deserialize))]
 pub struct KeybindComponent {
-    keybind: String
+    keybind: String,
 }
 
 impl KeybindComponent {
     pub fn from_keybind<T: Into<String>>(keybind: T) -> Self {
         KeybindComponent {
-            keybind: keybind.into()
+            keybind: keybind.into(),
         }
     }
 
