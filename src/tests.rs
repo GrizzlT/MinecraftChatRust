@@ -32,12 +32,18 @@ mod serde_support {
     #[test]
     fn test_deserializing() {
         let obj: ChatComponent = serde_json::from_str(r#"{"translate":"chat.type.text","with":[{"text":"Herobrine","clickEvent":{"action":"suggest_command","value":"/msg Herobrine "},"hoverEvent":{"action":"show_entity","value":"{id:f84c6a79-0a4e-45e0-879b-cd49ebd4c4e2,name:Herobrine}"},"insertion":"Herobrine"},{"text":"I don't exist"}]}"#).unwrap();
-
         assert_eq!(
             serde_json::to_value(&obj).unwrap(),
             json!({"translate":"chat.type.text","with":[{"text":"Herobrine","clickEvent":{"action":"suggest_command","value":"/msg Herobrine "},"hoverEvent":{"action":"show_entity","value":"{id:f84c6a79-0a4e-45e0-879b-cd49ebd4c4e2,name:Herobrine}"},"insertion":"Herobrine"},{"text":"I don't exist"}]})
         );
 
+        let obj2: ChatComponent = serde_json::from_str(r#"["",{"text":"Welcome to "},{"text":"Minecraft","color":"dark_blue"},{"text":" Tools","color":"green"}]"#).unwrap();
+        assert_eq!(
+            serde_json::to_value(&obj2).unwrap(),
+            json!({"text":"","extra":[{"text":"Welcome to "},{"text":"Minecraft","color":"dark_blue"},{"text":" Tools","color":"green"}]})
+        );
+
         println!("test: {:?}", obj);
+        println!("test2: {:?}", obj2);
     }
 }

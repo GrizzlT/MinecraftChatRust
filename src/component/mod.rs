@@ -2,10 +2,21 @@ use crate::style::ComponentStyle;
 use std::ops::{Deref, DerefMut};
 
 #[cfg(feature = "serde")]
+mod serde_support;
+#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// The central building block of Minecraft's JSON message format.
+///
+/// In Rust, this consists of a type ([`ComponentType`])
+/// , a style ([`ComponentStyle`]) and a list of other `ChatComponent`s
+/// that inherit the style of their parent.
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(
+    feature = "serde",
+    serde(try_from = "serde_support::ChatComponentType")
+)]
 pub struct ChatComponent {
     #[cfg_attr(feature = "serde", serde(flatten))]
     kind: ComponentType,
