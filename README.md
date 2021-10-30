@@ -1,8 +1,6 @@
 # Minecraft Chat Rust
-[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FGrizzlT%2FMinecraftChatRust.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FGrizzlT%2FMinecraftChatRust?ref=badge_shield)
-
-
 [![Latest Version](https://img.shields.io/crates/v/mc_chat)](https://crates.io/crates/mc_chat)
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2FGrizzlT%2FMinecraftChatRust.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2FGrizzlT%2FMinecraftChatRust?ref=badge_shield)
 
 This rust crate aims to provide an easy-to-use object hierarchy
 to manage raw JSON-messages sent over the minecraft protocol.
