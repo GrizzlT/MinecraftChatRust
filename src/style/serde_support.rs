@@ -1,9 +1,9 @@
-use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 
 use crate::component::ChatComponent;
+use crate::freeze::FreezeStr;
 use serde::ser::{SerializeMap, SerializeStruct};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
@@ -42,7 +42,7 @@ impl<'de> Deserialize<'de> for ChatColor {
     where
         D: Deserializer<'de>,
     {
-        let input = Cow::<'static, str>::deserialize(deserializer)?;
+        let input = FreezeStr::deserialize(deserializer)?;
         Ok(match input.deref() {
             "black" => ChatColor::Black,
             "dark_blue" => ChatColor::DarkBlue,
@@ -101,19 +101,19 @@ impl Serialize for ClickEvent {
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum ClickEventType {
-    String(Cow<'static, str>),
+    String(FreezeStr),
     U32(u32),
 }
 
 #[derive(Deserialize)]
 pub(crate) struct ClickEventData {
-    action: Cow<'static, str>,
+    action: FreezeStr,
     value: ClickEventType,
 }
 
 pub enum ClickEventDeserializeErr {
-    WrongKey(Cow<'static, str>),
-    NoValuFound(Cow<'static, str>),
+    WrongKey(FreezeStr),
+    NoValuFound(FreezeStr),
 }
 
 impl Display for ClickEventDeserializeErr {
@@ -179,19 +179,19 @@ impl Serialize for HoverEvent {
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum HoverEventType {
-    String(Cow<'static, str>),
+    String(FreezeStr),
     Chat(ChatComponent),
 }
 
 #[derive(Deserialize)]
 pub(crate) struct HoverEventData {
-    action: Cow<'static, str>,
+    action: FreezeStr,
     value: HoverEventType,
 }
 
 pub enum HoverEventDeserializeErr {
-    WrongKey(Cow<'static, str>),
-    NoValueFound(Cow<'static, str>),
+    WrongKey(FreezeStr),
+    NoValueFound(FreezeStr),
 }
 
 impl Display for HoverEventDeserializeErr {

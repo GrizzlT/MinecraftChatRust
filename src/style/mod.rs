@@ -1,6 +1,4 @@
-use std::borrow::Cow;
-
-use crate::component::ChatComponent;
+use crate::{component::ChatComponent, freeze::FreezeStr};
 
 #[cfg(feature = "serde")]
 use serde::Deserialize;
@@ -32,9 +30,9 @@ pub struct ComponentStyle {
     pub obfuscated: Option<bool>,
     pub color: Option<ChatColor>,
     /// This field is ignored for versions older than 1.8
-    pub insertion: Option<Cow<'static,str>>,
+    pub insertion: Option<FreezeStr>,
     /// This field is ignored for versions older than 1.16
-    pub font: Option<Cow<'static, str>>,
+    pub font: Option<FreezeStr>,
     #[cfg_attr(feature = "serde", serde(rename = "clickEvent"))]
     pub click_event: Option<ClickEvent>,
     #[cfg_attr(feature = "serde", serde(rename = "hoverEvent"))]
@@ -111,12 +109,12 @@ impl ComponentStyle {
         self
     }
 
-    pub fn font<T: Into<Cow<'static, str>>>(mut self, font: Option<T>) -> Self {
+    pub fn font<T: Into<FreezeStr>>(mut self, font: Option<T>) -> Self {
         self.font = font.map(|font| font.into());
         self
     }
 
-    pub fn insertion<T: Into<Cow<'static, str>>>(mut self, insertion: Option<T>) -> Self {
+    pub fn insertion<T: Into<FreezeStr>>(mut self, insertion: Option<T>) -> Self {
         self.insertion = insertion.map(|insertion| insertion.into());
         self
     }
@@ -149,6 +147,24 @@ impl ComponentStyle {
         self.click_event = None;
         self.hover_event = None;
     }
+
+    pub fn freeze(&mut self) {
+        if let Some(color) = &mut self.color {
+            color.freeze();
+        }
+        if let Some(insertion) = &mut self.insertion {
+            insertion.freeze();
+        }
+        if let Some(font) = &mut self.font {
+            font.freeze();
+        }
+        if let Some(event) = &mut self.click_event {
+            event.freeze();
+        }
+        if let Some(event) = &mut self.hover_event {
+            event.freeze();
+        }
+    }
 }
 
 /// The different colors a [`ChatComponent`] can have.
@@ -175,13 +191,20 @@ pub enum ChatColor {
     /// This field is ignored for versions older than 1.16.
     ///
     /// See [`ChatColor::custom()`].
-    Custom(Cow<'static, str>),
+    Custom(FreezeStr),
     Reset,
 }
 
 impl ChatColor {
-    pub fn custom<T: Into<Cow<'static, str>>>(color: T) -> ChatColor {
+    pub fn custom<T: Into<FreezeStr>>(color: T) -> ChatColor {
         ChatColor::Custom(color.into())
+    }
+
+    pub fn freeze(&mut self) {
+        match self {
+            Self::Custom(str) => str.freeze(),
+            _ => {}
+        }
     }
 }
 
@@ -190,24 +213,24 @@ impl ChatColor {
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "serde", serde(try_from = "serde_support::ClickEventData"))]
 pub enum ClickEvent {
-    OpenUrl(Cow<'static, str>),
-    RunCommand(Cow<'static, str>),
-    SuggestCommand(Cow<'static, str>),
+    OpenUrl(FreezeStr),
+    RunCommand(FreezeStr),
+    SuggestCommand(FreezeStr),
     ChangePage(u32),
     /// This field is ignored for versions older than 1.15.
-    CopyToClipBoard(Cow<'static, str>),
+    CopyToClipBoard(FreezeStr),
 }
 
 impl ClickEvent {
-    pub fn url<T: Into<Cow<'static, str>>>(url: T) -> Self {
+    pub fn url<T: Into<FreezeStr>>(url: T) -> Self {
         Self::OpenUrl(url.into())
     }
 
-    pub fn command<T: Into<Cow<'static, str>>>(cmd: T) -> Self {
+    pub fn command<T: Into<FreezeStr>>(cmd: T) -> Self {
         Self::RunCommand(cmd.into())
     }
 
-    pub fn suggest<T: Into<Cow<'static, str>>>(cmd: T) -> Self {
+    pub fn suggest<T: Into<FreezeStr>>(cmd: T) -> Self {
         Self::SuggestCommand(cmd.into())
     }
 
@@ -215,8 +238,18 @@ impl ClickEvent {
         Self::ChangePage(page.into())
     }
 
-    pub fn clipboard<T: Into<Cow<'static, str>>>(str: T) -> Self {
+    pub fn clipboard<T: Into<FreezeStr>>(str: T) -> Self {
         Self::CopyToClipBoard(str.into())
+    }
+
+    pub fn freeze(&mut self) {
+        match self {
+            Self::OpenUrl(str) => str.freeze(),
+            Self::RunCommand(str) => str.freeze(),
+            Self::SuggestCommand(str) => str.freeze(),
+            Self::CopyToClipBoard(str) => str.freeze(),
+            _ => {}
+        }
     }
 }
 
@@ -229,6 +262,16 @@ impl ClickEvent {
 #[cfg_attr(feature = "serde", serde(try_from = "serde_support::HoverEventData"))]
 pub enum HoverEvent {
     ShowText(Box<ChatComponent>),
-    ShowItem(Cow<'static, str>),
-    ShowEntity(Cow<'static, str>),
+    ShowItem(FreezeStr),
+    ShowEntity(FreezeStr),
+}
+
+impl HoverEvent {
+    pub fn freeze(&mut self) {
+        match self {
+            HoverEvent::ShowText(text) => text.freeze(),
+            HoverEvent::ShowItem(str) => str.freeze(),
+            HoverEvent::ShowEntity(str) => str.freeze(),
+        }
+    }
 }
