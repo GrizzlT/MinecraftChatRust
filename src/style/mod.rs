@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use crate::component::ChatComponent;
 
 #[cfg(feature = "serde")]
@@ -22,41 +24,41 @@ pub struct ComponentStyle {
         feature = "serde",
         serde(skip, default = "serde_support::default_style_version")
     )]
-    version: u32,
-    bold: Option<bool>,
-    italic: Option<bool>,
-    underlined: Option<bool>,
-    strikethrough: Option<bool>,
-    obfuscated: Option<bool>,
-    color: Option<ChatColor>,
+    pub version: u32,
+    pub bold: Option<bool>,
+    pub italic: Option<bool>,
+    pub underlined: Option<bool>,
+    pub strikethrough: Option<bool>,
+    pub obfuscated: Option<bool>,
+    pub color: Option<ChatColor>,
     /// This field is ignored for versions older than 1.8
-    insertion: Option<String>,
+    pub insertion: Option<Cow<'static,str>>,
     /// This field is ignored for versions older than 1.16
-    font: Option<String>,
+    pub font: Option<Cow<'static, str>>,
     #[cfg_attr(feature = "serde", serde(rename = "clickEvent"))]
-    click_event: Option<ClickEvent>,
+    pub click_event: Option<ClickEvent>,
     #[cfg_attr(feature = "serde", serde(rename = "hoverEvent"))]
-    hover_event: Option<HoverEvent>,
+    pub hover_event: Option<HoverEvent>,
 }
 
 impl ComponentStyle {
     pub fn v1_7() -> Self {
-        ComponentStyle::with_version(4)
+        ComponentStyle::new(4)
     }
 
     pub fn v1_8() -> Self {
-        ComponentStyle::with_version(47)
+        ComponentStyle::new(47)
     }
 
     pub fn v1_15() -> Self {
-        ComponentStyle::with_version(573)
+        ComponentStyle::new(573)
     }
 
     pub fn v1_16() -> Self {
-        ComponentStyle::with_version(735)
+        ComponentStyle::new(735)
     }
 
-    pub fn with_version(version: u32) -> Self {
+    pub fn new(version: u32) -> Self {
         ComponentStyle {
             version,
             bold: None,
@@ -72,157 +74,66 @@ impl ComponentStyle {
         }
     }
 
-    pub fn set_color(&mut self, color: Option<ChatColor>) {
+    pub fn and_color(mut self, color: Option<ChatColor>) -> Self {
         self.color = color;
-    }
-
-    pub fn color(mut self, color: Option<ChatColor>) -> Self {
-        self.set_color(color);
         self
     }
 
-    pub fn set_color_if_absent(&mut self, color: ChatColor) {
+    pub fn color(mut self, color: ChatColor) -> Self {
         if self.color.is_none() {
             self.color = Some(color);
         }
-    }
-
-    pub fn color_if_absent(mut self, color: ChatColor) -> Self {
-        self.set_color_if_absent(color);
         self
-    }
-
-    pub fn set_bold(&mut self, bold: bool) {
-        self.bold = Some(bold);
     }
 
     pub fn bold(mut self, bold: bool) -> Self {
-        self.set_bold(bold);
+        self.bold = Some(bold);
         self
-    }
-
-    pub fn set_italic(&mut self, italic: bool) {
-        self.italic = Some(italic);
     }
 
     pub fn italic(mut self, italic: bool) -> Self {
-        self.set_italic(italic);
+        self.italic = Some(italic);
         self
-    }
-
-    pub fn set_underlined(&mut self, underlined: bool) {
-        self.underlined = Some(underlined);
     }
 
     pub fn underlined(mut self, underlined: bool) -> Self {
-        self.set_underlined(underlined);
+        self.underlined = Some(underlined);
         self
-    }
-
-    pub fn set_strikethrough(&mut self, strikethrough: bool) {
-        self.strikethrough = Some(strikethrough);
     }
 
     pub fn strikethrough(mut self, strikethrough: bool) -> Self {
-        self.set_strikethrough(strikethrough);
+        self.strikethrough = Some(strikethrough);
         self
-    }
-
-    pub fn set_obfuscated(&mut self, obfuscated: bool) {
-        self.obfuscated = Some(obfuscated);
     }
 
     pub fn obfuscated(mut self, obfuscated: bool) -> Self {
-        self.set_obfuscated(obfuscated);
+        self.obfuscated = Some(obfuscated);
         self
     }
 
-    pub fn set_font<T: Into<String>>(&mut self, font: Option<T>) {
+    pub fn font<T: Into<Cow<'static, str>>>(mut self, font: Option<T>) -> Self {
         self.font = font.map(|font| font.into());
-    }
-
-    pub fn font<T: Into<String>>(mut self, font: Option<T>) -> Self {
-        self.set_font(font);
         self
     }
 
-    pub fn set_insertion<T: Into<String>>(&mut self, insertion: Option<T>) {
+    pub fn insertion<T: Into<Cow<'static, str>>>(mut self, insertion: Option<T>) -> Self {
         self.insertion = insertion.map(|insertion| insertion.into());
-    }
-
-    pub fn insertion<T: Into<String>>(mut self, insertion: Option<T>) -> Self {
-        self.set_insertion(insertion);
         self
     }
 
-    pub fn set_click_event(&mut self, click_event: Option<ClickEvent>) {
+    pub fn click(mut self, click_event: Option<ClickEvent>) -> Self {
         self.click_event = click_event;
-    }
-
-    pub fn click_event(mut self, click_event: Option<ClickEvent>) -> Self {
-        self.set_click_event(click_event);
         self
     }
 
-    pub fn set_hover_event(&mut self, hover_event: Option<HoverEvent>) {
+    pub fn hover(mut self, hover_event: Option<HoverEvent>) -> Self {
         self.hover_event = hover_event;
-    }
-
-    pub fn hover_event(mut self, hover_event: Option<HoverEvent>) -> Self {
-        self.set_hover_event(hover_event);
         self
     }
 
-    pub fn get_color(&self) -> Option<&ChatColor> {
-        self.color.as_ref()
-    }
-
-    pub fn get_bold(&self) -> Option<bool> {
-        self.bold
-    }
-
-    pub fn get_italic(&self) -> Option<bool> {
-        self.italic
-    }
-
-    pub fn get_underlined(&self) -> Option<bool> {
-        self.underlined
-    }
-
-    pub fn get_strikethrough(&self) -> Option<bool> {
-        self.strikethrough
-    }
-
-    pub fn get_obfuscated(&self) -> Option<bool> {
-        self.obfuscated
-    }
-
-    pub fn get_font(&self) -> Option<&String> {
-        if self.version >= 713 {
-            self.font.as_ref()
-        } else {
-            None
-        }
-    }
-
-    pub fn get_insertion(&self) -> Option<&String> {
-        if self.version >= 5 {
-            self.insertion.as_ref()
-        } else {
-            None
-        }
-    }
-
-    pub fn get_click_event(&self) -> Option<&ClickEvent> {
-        self.click_event.as_ref()
-    }
-
-    pub fn get_hover_event(&self) -> Option<&HoverEvent> {
-        self.hover_event.as_ref()
-    }
-
-    pub fn change_version(&mut self, to: u32) {
+    pub fn version(mut self, to: u32) -> Self {
         self.version = to;
+        self
     }
 
     /// Resets all fields to default (being [`None`]).
@@ -264,12 +175,12 @@ pub enum ChatColor {
     /// This field is ignored for versions older than 1.16.
     ///
     /// See [`ChatColor::custom()`].
-    Custom(String),
+    Custom(Cow<'static, str>),
     Reset,
 }
 
 impl ChatColor {
-    pub fn custom<T: Into<String>>(color: T) -> ChatColor {
+    pub fn custom<T: Into<Cow<'static, str>>>(color: T) -> ChatColor {
         ChatColor::Custom(color.into())
     }
 }
@@ -279,24 +190,24 @@ impl ChatColor {
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "serde", serde(try_from = "serde_support::ClickEventData"))]
 pub enum ClickEvent {
-    OpenUrl(String),
-    RunCommand(String),
-    SuggestCommand(String),
+    OpenUrl(Cow<'static, str>),
+    RunCommand(Cow<'static, str>),
+    SuggestCommand(Cow<'static, str>),
     ChangePage(u32),
     /// This field is ignored for versions older than 1.15.
-    CopyToClipBoard(String),
+    CopyToClipBoard(Cow<'static, str>),
 }
 
 impl ClickEvent {
-    pub fn url<T: Into<String>>(url: T) -> Self {
+    pub fn url<T: Into<Cow<'static, str>>>(url: T) -> Self {
         Self::OpenUrl(url.into())
     }
 
-    pub fn run_command<T: Into<String>>(cmd: T) -> Self {
+    pub fn command<T: Into<Cow<'static, str>>>(cmd: T) -> Self {
         Self::RunCommand(cmd.into())
     }
 
-    pub fn suggest_command<T: Into<String>>(cmd: T) -> Self {
+    pub fn suggest<T: Into<Cow<'static, str>>>(cmd: T) -> Self {
         Self::SuggestCommand(cmd.into())
     }
 
@@ -304,7 +215,7 @@ impl ClickEvent {
         Self::ChangePage(page.into())
     }
 
-    pub fn clipboard<T: Into<String>>(str: T) -> Self {
+    pub fn clipboard<T: Into<Cow<'static, str>>>(str: T) -> Self {
         Self::CopyToClipBoard(str.into())
     }
 }
@@ -318,6 +229,6 @@ impl ClickEvent {
 #[cfg_attr(feature = "serde", serde(try_from = "serde_support::HoverEventData"))]
 pub enum HoverEvent {
     ShowText(Box<ChatComponent>),
-    ShowItem(String),
-    ShowEntity(String),
+    ShowItem(Cow<'static, str>),
+    ShowEntity(Cow<'static, str>),
 }

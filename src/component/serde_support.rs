@@ -18,6 +18,7 @@ pub(crate) struct FakeChatComponent {
     siblings: Vec<ChatComponent>,
 }
 
+#[doc(hidden)]
 impl From<FakeChatComponent> for ChatComponent {
     fn from(component: FakeChatComponent) -> Self {
         ChatComponent {
@@ -52,10 +53,10 @@ impl TryFrom<ChatComponentType> for ChatComponent {
     fn try_from(value: ChatComponentType) -> Result<Self, Self::Error> {
         match value {
             ChatComponentType::Primitive(text) => {
-                Ok(ChatComponent::from_text(text, ComponentStyle::v1_16()))
+                Ok(ChatComponent::text(text, ComponentStyle::v1_16()))
             }
-            ChatComponentType::Array(mut array) => {
-                let mut iterator = array.drain(..);
+            ChatComponentType::Array(array) => {
+                let mut iterator = array.into_iter();
                 let mut first = match iterator.next() {
                     Some(value) => value,
                     None => return Err(ChatComponentDeserializeErr::EmptyArray),
