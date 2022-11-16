@@ -1,5 +1,6 @@
-use crate::style::ComponentStyle;
-use std::{ops::{Deref, DerefMut}, borrow::Cow};
+use std::ops::{Deref, DerefMut};
+
+use crate::{style::ComponentStyle, freeze::FreezeStr};
 
 #[cfg(feature = "serde")]
 mod serde_support;
@@ -38,7 +39,7 @@ impl ChatComponent {
         }
     }
 
-    pub fn text<T: Into<Cow<'static, str>>>(text: T, style: ComponentStyle) -> Self {
+    pub fn text<T: Into<FreezeStr>>(text: T, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Text(TextComponent::new(text)),
             style,
@@ -46,7 +47,7 @@ impl ChatComponent {
         }
     }
 
-    pub fn key<T: Into<Cow<'static, str>>>(key: T, style: ComponentStyle) -> Self {
+    pub fn key<T: Into<FreezeStr>>(key: T, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Translation(TranslationComponent::new(key)),
             style,
@@ -54,7 +55,7 @@ impl ChatComponent {
         }
     }
 
-    pub fn score<T: Into<Cow<'static, str>>, U: Into<Cow<'static, str>>>(
+    pub fn score<T: Into<FreezeStr>, U: Into<FreezeStr>>(
         name: T,
         objective: U,
         style: ComponentStyle,
@@ -66,7 +67,7 @@ impl ChatComponent {
         }
     }
 
-    pub fn selector<T: Into<Cow<'static, str>>>(selector: T, style: ComponentStyle) -> Self {
+    pub fn selector<T: Into<FreezeStr>>(selector: T, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Selector(SelectorComponent::new(selector)),
             style,
@@ -74,11 +75,19 @@ impl ChatComponent {
         }
     }
 
-    pub fn keybind<T: Into<Cow<'static, str>>>(keybind: T, style: ComponentStyle) -> Self {
+    pub fn keybind<T: Into<FreezeStr>>(keybind: T, style: ComponentStyle) -> Self {
         ChatComponent {
             kind: ComponentType::Keybind(KeybindComponent::new(keybind)),
             style,
             siblings: vec![],
+        }
+    }
+    
+    pub fn freeze(&mut self) {
+        self.kind.freeze();
+        self.style.freeze();
+        for sibling in &mut self.siblings {
+            sibling.freeze();
         }
     }
 }
@@ -127,20 +136,36 @@ pub enum ComponentType {
     // TODO: research the `storage` component (since 1.15)
 }
 
+impl ComponentType {
+    pub fn freeze(&mut self) {
+        match self {
+            Self::Text(v) => v.freeze(),
+            Self::Translation(v) => v.freeze(),
+            Self::Score(v) => v.freeze(),
+            Self::Selector(v) => v.freeze(),
+            Self::Keybind(v) => v.freeze(),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TextComponent {
-    pub text: Cow<'static, str>,
+    pub text: FreezeStr,
 }
 
 impl TextComponent {
-    pub fn new<T: Into<Cow<'static, str>>>(text: T) -> Self {
+    pub fn new<T: Into<FreezeStr>>(text: T) -> Self {
         TextComponent { text: text.into() }
     }
 
-    pub fn text<T: Into<Cow<'static, str>>>(mut self, text: T) -> Self {
+    pub fn text<T: Into<FreezeStr>>(mut self, text: T) -> Self {
         self.text = text.into();
         self
+    }
+
+    pub fn freeze(&mut self) {
+        self.text.freeze();
     }
 }
 
@@ -148,19 +173,19 @@ impl TextComponent {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TranslationComponent {
     #[cfg_attr(feature = "serde", serde(rename = "translate"))]
-    pub key: Cow<'static, str>,
+    pub key: FreezeStr,
     pub with: Vec<ChatComponent>,
 }
 
 impl TranslationComponent {
-    pub fn new<T: Into<Cow<'static, str>>>(key: T) -> Self {
+    pub fn new<T: Into<FreezeStr>>(key: T) -> Self {
         TranslationComponent {
             key: key.into(),
             with: vec![],
         }
     }
 
-    pub fn key<T: Into<Cow<'static, str>>>(mut self, key: T) -> Self {
+    pub fn key<T: Into<FreezeStr>>(mut self, key: T) -> Self {
         self.key = key.into();
         self
     }
@@ -169,19 +194,26 @@ impl TranslationComponent {
         self.with.push(component);
         self
     }
+
+    pub fn freeze(&mut self) {
+        self.key.freeze();
+        for arg in &mut self.with {
+            arg.freeze();
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ScoreComponent {
-    pub name: Cow<'static, str>,
-    pub objective: Cow<'static, str>,
+    pub name: FreezeStr,
+    pub objective: FreezeStr,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    pub value: Option<Cow<'static, str>>,
+    pub value: Option<FreezeStr>,
 }
 
 impl ScoreComponent {
-    pub fn new<T: Into<Cow<'static, str>>, U: Into<Cow<'static, str>>>(name: T, objective: U) -> Self {
+    pub fn new<T: Into<FreezeStr>, U: Into<FreezeStr>>(name: T, objective: U) -> Self {
         ScoreComponent {
             name: name.into(),
             objective: objective.into(),
@@ -189,56 +221,73 @@ impl ScoreComponent {
         }
     }
 
-    pub fn name<T: Into<Cow<'static, str>>>(mut self, name: T) -> Self {
+    pub fn name<T: Into<FreezeStr>>(mut self, name: T) -> Self {
         self.name = name.into();
         self
     }
 
-    pub fn objective<T: Into<Cow<'static, str>>>(mut self, objective: T) -> Self {
+    pub fn objective<T: Into<FreezeStr>>(mut self, objective: T) -> Self {
         self.objective = objective.into();
         self
     }
 
-    pub fn value<T: Into<Cow<'static, str>>>(mut self, value: Option<T>) -> Self {
+    pub fn value<T: Into<FreezeStr>>(mut self, value: Option<T>) -> Self {
         self.value = value.map(|value| value.into());
         self
+    }
+
+    pub fn freeze(&mut self) {
+        self.name.freeze();
+        self.objective.freeze();
+        if let Some(value) = &mut self.value {
+            value.freeze();
+        }
+
     }
 }
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SelectorComponent {
-    pub selector: Cow<'static, str>,
+    pub selector: FreezeStr,
 }
 
 impl SelectorComponent {
-    pub fn new<T: Into<Cow<'static, str>>>(selector: T) -> Self {
+    pub fn new<T: Into<FreezeStr>>(selector: T) -> Self {
         SelectorComponent {
             selector: selector.into(),
         }
     }
 
-    pub fn selector<T: Into<Cow<'static, str>>>(mut self, selector: T) -> Self {
+    pub fn selector<T: Into<FreezeStr>>(mut self, selector: T) -> Self {
         self.selector = selector.into();
         self
+    }
+
+    pub fn freeze(&mut self) {
+        self.selector.freeze();
     }
 }
 
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct KeybindComponent {
-    pub keybind: Cow<'static, str>,
+    pub keybind: FreezeStr,
 }
 
 impl KeybindComponent {
-    pub fn new<T: Into<Cow<'static, str>>>(keybind: T) -> Self {
+    pub fn new<T: Into<FreezeStr>>(keybind: T) -> Self {
         KeybindComponent {
             keybind: keybind.into(),
         }
     }
 
-    pub fn keybind<T: Into<Cow<'static, str>>>(mut self, keybind: T) -> Self {
+    pub fn keybind<T: Into<FreezeStr>>(mut self, keybind: T) -> Self {
         self.keybind = keybind.into();
         self
+    }
+
+    pub fn freeze(&mut self) {
+        self.keybind.freeze();
     }
 }

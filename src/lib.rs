@@ -19,6 +19,7 @@
 
 mod component;
 mod style;
+mod freeze;
 
 mod tests;
 
