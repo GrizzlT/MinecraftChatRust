@@ -3,6 +3,7 @@
 #[cfg(feature = "serde")]
 #[cfg(test)]
 mod serde_support {
+    use crate::VERSION_1_7;
     use crate::component::ChatComponent;
     use crate::style::{ChatColor, ClickEvent, ComponentStyle};
 
@@ -10,17 +11,16 @@ mod serde_support {
 
     #[test]
     fn test_serializing() {
-        let mut test_obj = ChatComponent::from_text(
+        let test_obj = ChatComponent::text(
             "Test String",
             ComponentStyle::v1_16()
-                .color_if_absent(ChatColor::custom("test_color"))
+                .color(ChatColor::custom("test_color"))
                 .font(Some("test"))
-                .click_event(Some(ClickEvent::clipboard("test for copy to clipboard!")))
+                .click(Some(ClickEvent::clipboard("test for copy to clipboard!")))
                 .insertion(Some("Testing insertion haha!"))
-                .bold(true),
+                .bold(true)
+                .version(VERSION_1_7),
         );
-
-        test_obj.change_version(crate::style::VERSION_1_7);
 
         let output = serde_json::to_string(&test_obj).unwrap();
 

@@ -1,5 +1,7 @@
+use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
+use std::ops::Deref;
 
 use crate::component::ChatComponent;
 use serde::ser::{SerializeMap, SerializeStruct};
@@ -40,8 +42,8 @@ impl<'de> Deserialize<'de> for ChatColor {
     where
         D: Deserializer<'de>,
     {
-        let input = String::deserialize(deserializer)?;
-        Ok(match input.as_str() {
+        let input = Cow::<'static, str>::deserialize(deserializer)?;
+        Ok(match input.deref() {
             "black" => ChatColor::Black,
             "dark_blue" => ChatColor::DarkBlue,
             "dark_green" => ChatColor::DarkGreen,
@@ -99,19 +101,19 @@ impl Serialize for ClickEvent {
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum ClickEventType {
-    String(String),
+    String(Cow<'static, str>),
     U32(u32),
 }
 
 #[derive(Deserialize)]
 pub(crate) struct ClickEventData {
-    action: String,
+    action: Cow<'static, str>,
     value: ClickEventType,
 }
 
 pub enum ClickEventDeserializeErr {
-    WrongKey(String),
-    NoValuFound(String),
+    WrongKey(Cow<'static, str>),
+    NoValuFound(Cow<'static, str>),
 }
 
 impl Display for ClickEventDeserializeErr {
@@ -127,7 +129,7 @@ impl TryFrom<ClickEventData> for ClickEvent {
     type Error = ClickEventDeserializeErr;
 
     fn try_from(data: ClickEventData) -> Result<Self, Self::Error> {
-        if data.action.as_str() == "change_page" {
+        if data.action.deref() == "change_page" {
             if let ClickEventType::U32(value) = data.value {
                 Ok(ClickEvent::ChangePage(value))
             } else {
@@ -135,7 +137,7 @@ impl TryFrom<ClickEventData> for ClickEvent {
             }
         } else {
             if let ClickEventType::String(str) = data.value {
-                match data.action.as_str() {
+                match data.action.deref() {
                     "open_url" => Ok(ClickEvent::OpenUrl(str)),
                     "run_command" => Ok(ClickEvent::RunCommand(str)),
                     "suggest_command" => Ok(ClickEvent::SuggestCommand(str)),
@@ -177,19 +179,19 @@ impl Serialize for HoverEvent {
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum HoverEventType {
-    String(String),
+    String(Cow<'static, str>),
     Chat(ChatComponent),
 }
 
 #[derive(Deserialize)]
 pub(crate) struct HoverEventData {
-    action: String,
+    action: Cow<'static, str>,
     value: HoverEventType,
 }
 
 pub enum HoverEventDeserializeErr {
-    WrongKey(String),
-    NoValueFound(String),
+    WrongKey(Cow<'static, str>),
+    NoValueFound(Cow<'static, str>),
 }
 
 impl Display for HoverEventDeserializeErr {
@@ -207,7 +209,7 @@ impl TryFrom<HoverEventData> for HoverEvent {
     type Error = HoverEventDeserializeErr;
 
     fn try_from(data: HoverEventData) -> Result<Self, Self::Error> {
-        if data.action.as_str() == "show_text" {
+        if data.action.deref() == "show_text" {
             if let HoverEventType::Chat(component) = data.value {
                 Ok(HoverEvent::ShowText(Box::new(component)))
             } else {
@@ -215,7 +217,7 @@ impl TryFrom<HoverEventData> for HoverEvent {
             }
         } else {
             if let HoverEventType::String(str) = data.value {
-                match data.action.as_str() {
+                match data.action.deref() {
                     "show_item" => Ok(HoverEvent::ShowItem(str)),
                     "show_entity" => Ok(HoverEvent::ShowEntity(str)),
                     _ => Err(HoverEventDeserializeErr::WrongKey(str)),
@@ -284,6 +286,7 @@ impl Serialize for ComponentStyle {
     }
 }
 
+#[inline]
 pub(crate) fn default_style_version() -> u32 {
     VERSION_1_16
 }

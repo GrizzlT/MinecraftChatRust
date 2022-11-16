@@ -1,5 +1,5 @@
 use crate::style::ComponentStyle;
-use std::ops::{Deref, DerefMut};
+use std::{ops::{Deref, DerefMut}, borrow::Cow};
 
 #[cfg(feature = "serde")]
 mod serde_support;
@@ -19,18 +19,18 @@ use serde::{Deserialize, Serialize};
 )]
 pub struct ChatComponent {
     #[cfg_attr(feature = "serde", serde(flatten))]
-    kind: ComponentType,
+    pub kind: ComponentType,
     #[cfg_attr(feature = "serde", serde(flatten))]
-    style: ComponentStyle,
+    pub style: ComponentStyle,
     #[cfg_attr(
         feature = "serde",
         serde(rename = "extra", skip_serializing_if = "Vec::is_empty", default)
     )]
-    siblings: Vec<ChatComponent>,
+    pub siblings: Vec<ChatComponent>,
 }
 
 impl ChatComponent {
-    pub fn from_component(kind: ComponentType, style: ComponentStyle) -> Self {
+    pub fn component(kind: ComponentType, style: ComponentStyle) -> Self {
         ChatComponent {
             kind,
             style,
@@ -38,72 +38,48 @@ impl ChatComponent {
         }
     }
 
-    pub fn from_text<T: Into<String>>(text: T, style: ComponentStyle) -> Self {
+    pub fn text<T: Into<Cow<'static, str>>>(text: T, style: ComponentStyle) -> Self {
         ChatComponent {
-            kind: ComponentType::Text(TextComponent::from_text(text)),
+            kind: ComponentType::Text(TextComponent::new(text)),
             style,
             siblings: vec![],
         }
     }
 
-    pub fn from_key<T: Into<String>>(key: T, style: ComponentStyle) -> Self {
+    pub fn key<T: Into<Cow<'static, str>>>(key: T, style: ComponentStyle) -> Self {
         ChatComponent {
-            kind: ComponentType::Translation(TranslationComponent::from_key(key)),
+            kind: ComponentType::Translation(TranslationComponent::new(key)),
             style,
             siblings: vec![],
         }
     }
 
-    pub fn from_score<T: Into<String>, U: Into<String>>(
+    pub fn score<T: Into<Cow<'static, str>>, U: Into<Cow<'static, str>>>(
         name: T,
         objective: U,
         style: ComponentStyle,
     ) -> Self {
         ChatComponent {
-            kind: ComponentType::Score(ScoreComponent::from_score(name, objective)),
+            kind: ComponentType::Score(ScoreComponent::new(name, objective)),
             style,
             siblings: vec![],
         }
     }
 
-    pub fn from_selector<T: Into<String>>(selector: T, style: ComponentStyle) -> Self {
+    pub fn selector<T: Into<Cow<'static, str>>>(selector: T, style: ComponentStyle) -> Self {
         ChatComponent {
-            kind: ComponentType::Selector(SelectorComponent::from_selector(selector)),
+            kind: ComponentType::Selector(SelectorComponent::new(selector)),
             style,
             siblings: vec![],
         }
     }
 
-    pub fn from_keybind<T: Into<String>>(keybind: T, style: ComponentStyle) -> Self {
+    pub fn keybind<T: Into<Cow<'static, str>>>(keybind: T, style: ComponentStyle) -> Self {
         ChatComponent {
-            kind: ComponentType::Keybind(KeybindComponent::from_keybind(keybind)),
+            kind: ComponentType::Keybind(KeybindComponent::new(keybind)),
             style,
             siblings: vec![],
         }
-    }
-
-    pub fn get_kind(&self) -> &ComponentType {
-        &self.kind
-    }
-
-    pub fn get_kind_mut(&mut self) -> &mut ComponentType {
-        &mut self.kind
-    }
-
-    pub fn get_style(&self) -> &ComponentStyle {
-        &self.style
-    }
-
-    pub fn get_style_mut(&mut self) -> &mut ComponentStyle {
-        &mut self.style
-    }
-
-    pub fn get_siblings(&self) -> &Vec<ChatComponent> {
-        &self.siblings
-    }
-
-    pub fn get_siblings_mut(&mut self) -> &mut Vec<ChatComponent> {
-        &mut self.siblings
     }
 }
 
@@ -154,24 +130,16 @@ pub enum ComponentType {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TextComponent {
-    text: String,
+    pub text: Cow<'static, str>,
 }
 
 impl TextComponent {
-    pub fn from_text<T: Into<String>>(text: T) -> Self {
+    pub fn new<T: Into<Cow<'static, str>>>(text: T) -> Self {
         TextComponent { text: text.into() }
     }
 
-    pub fn get_text(&self) -> &String {
-        &self.text
-    }
-
-    pub fn set_text<T: Into<String>>(&mut self, text: T) {
-        self.text = text.into()
-    }
-
-    pub fn text<T: Into<String>>(mut self, text: T) -> Self {
-        self.set_text(text);
+    pub fn text<T: Into<Cow<'static, str>>>(mut self, text: T) -> Self {
+        self.text = text.into();
         self
     }
 }
@@ -180,37 +148,25 @@ impl TextComponent {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TranslationComponent {
     #[cfg_attr(feature = "serde", serde(rename = "translate"))]
-    key: String,
-    with: Vec<ChatComponent>,
+    pub key: Cow<'static, str>,
+    pub with: Vec<ChatComponent>,
 }
 
 impl TranslationComponent {
-    pub fn from_key<T: Into<String>>(key: T) -> Self {
+    pub fn new<T: Into<Cow<'static, str>>>(key: T) -> Self {
         TranslationComponent {
             key: key.into(),
             with: vec![],
         }
     }
 
-    pub fn get_key(&self) -> &String {
-        &self.key
-    }
-
-    pub fn set_key<T: Into<String>>(&mut self, key: T) {
-        self.key = key.into()
-    }
-
-    pub fn key<T: Into<String>>(mut self, key: T) -> Self {
-        self.set_key(key);
+    pub fn key<T: Into<Cow<'static, str>>>(mut self, key: T) -> Self {
+        self.key = key.into();
         self
     }
 
-    pub fn add_arg(&mut self, component: ChatComponent) {
-        self.with.push(component)
-    }
-
     pub fn argument(mut self, component: ChatComponent) -> Self {
-        self.add_arg(component);
+        self.with.push(component);
         self
     }
 }
@@ -218,14 +174,14 @@ impl TranslationComponent {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct ScoreComponent {
-    name: String,
-    objective: String,
+    pub name: Cow<'static, str>,
+    pub objective: Cow<'static, str>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    value: Option<String>,
+    pub value: Option<Cow<'static, str>>,
 }
 
 impl ScoreComponent {
-    pub fn from_score<T: Into<String>, U: Into<String>>(name: T, objective: U) -> Self {
+    pub fn new<T: Into<Cow<'static, str>>, U: Into<Cow<'static, str>>>(name: T, objective: U) -> Self {
         ScoreComponent {
             name: name.into(),
             objective: objective.into(),
@@ -233,42 +189,18 @@ impl ScoreComponent {
         }
     }
 
-    pub fn get_name(&self) -> &String {
-        &self.name
-    }
-
-    pub fn set_name<T: Into<String>>(&mut self, name: T) {
-        self.name = name.into()
-    }
-
-    pub fn name<T: Into<String>>(mut self, name: T) -> Self {
-        self.set_name(name);
+    pub fn name<T: Into<Cow<'static, str>>>(mut self, name: T) -> Self {
+        self.name = name.into();
         self
     }
 
-    pub fn get_objective(&self) -> &String {
-        &self.objective
-    }
-
-    pub fn set_objective<T: Into<String>>(&mut self, objective: T) {
-        self.objective = objective.into()
-    }
-
-    pub fn objective<T: Into<String>>(mut self, objective: T) -> Self {
-        self.set_objective(objective);
+    pub fn objective<T: Into<Cow<'static, str>>>(mut self, objective: T) -> Self {
+        self.objective = objective.into();
         self
     }
 
-    pub fn get_value(&self) -> Option<&String> {
-        self.value.as_ref()
-    }
-
-    pub fn set_value<T: Into<String>>(&mut self, value: Option<T>) {
+    pub fn value<T: Into<Cow<'static, str>>>(mut self, value: Option<T>) -> Self {
         self.value = value.map(|value| value.into());
-    }
-
-    pub fn value<T: Into<String>>(mut self, value: Option<T>) -> Self {
-        self.set_value(value);
         self
     }
 }
@@ -276,26 +208,18 @@ impl ScoreComponent {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct SelectorComponent {
-    selector: String,
+    pub selector: Cow<'static, str>,
 }
 
 impl SelectorComponent {
-    pub fn from_selector<T: Into<String>>(selector: T) -> Self {
+    pub fn new<T: Into<Cow<'static, str>>>(selector: T) -> Self {
         SelectorComponent {
             selector: selector.into(),
         }
     }
 
-    pub fn get_selector(&self) -> &String {
-        &self.selector
-    }
-
-    pub fn set_selector<T: Into<String>>(&mut self, selector: T) {
-        self.selector = selector.into()
-    }
-
-    pub fn selector<T: Into<String>>(mut self, selector: T) -> Self {
-        self.set_selector(selector);
+    pub fn selector<T: Into<Cow<'static, str>>>(mut self, selector: T) -> Self {
+        self.selector = selector.into();
         self
     }
 }
@@ -303,26 +227,18 @@ impl SelectorComponent {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct KeybindComponent {
-    keybind: String,
+    pub keybind: Cow<'static, str>,
 }
 
 impl KeybindComponent {
-    pub fn from_keybind<T: Into<String>>(keybind: T) -> Self {
+    pub fn new<T: Into<Cow<'static, str>>>(keybind: T) -> Self {
         KeybindComponent {
             keybind: keybind.into(),
         }
     }
 
-    pub fn get_keybind(&self) -> &String {
-        &self.keybind
-    }
-
-    pub fn set_keybind<T: Into<String>>(&mut self, keybind: T) {
-        self.keybind = keybind.into()
-    }
-
-    pub fn keybind<T: Into<String>>(mut self, keybind: T) -> Self {
-        self.set_keybind(keybind);
+    pub fn keybind<T: Into<Cow<'static, str>>>(mut self, keybind: T) -> Self {
+        self.keybind = keybind.into();
         self
     }
 }
