@@ -1,56 +1,39 @@
-use std::{borrow::Cow, sync::Arc, ops::Deref, fmt::Display};
+use std::{sync::Arc, ops::Deref, fmt::Display};
 
 use serde::{Serialize, Deserialize};
 
-#[derive(Debug, Clone)]
-pub enum FreezeStr {
-    Cow(Cow<'static, str>),
-    Frozen(Arc<str>),
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct FrozenStr {
+    str: Arc<str>,
 }
 
-impl FreezeStr {
-    pub fn freeze(&mut self) {
-        match self {
-            FreezeStr::Cow(str) => {
-                let str = std::mem::take(str);
-                *self = FreezeStr::Frozen(str.into());
-            },
-            FreezeStr::Frozen(_) => {},
-        }
-    }
-}
-
-impl Display for FreezeStr {
+impl Display for FrozenStr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            FreezeStr::Cow(str) => str.fmt(f),
-            FreezeStr::Frozen(str) => str.fmt(f),
-        }
+        self.str.fmt(f)
     }
 }
 
-impl<T> From<T> for FreezeStr
+impl<T> From<T> for FrozenStr
 where
-    T: Into<Cow<'static, str>>,
+    T: Into<Arc<str>>,
 {
     fn from(str: T) -> Self {
-        Self::Cow(str.into())
+        Self {
+            str: str.into()
+        }
     }
 }
 
-impl Deref for FreezeStr {
+impl Deref for FrozenStr {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
-        match self {
-            Self::Cow(str) => str.deref(),
-            Self::Frozen(str) => str.deref(),
-        }
+        self.str.deref()
     }
 }
 
 #[cfg(feature = "serde")]
-impl Serialize for FreezeStr {
+impl Serialize for FrozenStr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer
@@ -60,12 +43,12 @@ impl Serialize for FreezeStr {
 }
 
 #[cfg(feature = "serde")]
-impl<'de> Deserialize<'de> for FreezeStr {
+impl<'de> Deserialize<'de> for FrozenStr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>
     {
-        let str = Cow::<'static, str>::deserialize(deserializer)?;
-        Ok(Self::Cow(str))
+        let str = <&str>::deserialize(deserializer)?;
+        Ok(str.into())
     }
 }

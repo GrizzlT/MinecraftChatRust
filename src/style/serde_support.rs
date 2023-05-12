@@ -2,12 +2,12 @@ use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 
-use crate::component::ChatComponent;
-use crate::freeze::FreezeStr;
+use crate::component::Chat;
+use crate::freeze::FrozenStr;
 use serde::ser::{SerializeMap, SerializeStruct};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use crate::style::{ChatColor, ClickEvent, ComponentStyle, HoverEvent, VERSION_1_16};
+use crate::style::{ChatColor, ClickEvent, Style, HoverEvent, VERSION_1_16};
 
 impl Serialize for ChatColor {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -42,7 +42,7 @@ impl<'de> Deserialize<'de> for ChatColor {
     where
         D: Deserializer<'de>,
     {
-        let input = FreezeStr::deserialize(deserializer)?;
+        let input = FrozenStr::deserialize(deserializer)?;
         Ok(match input.deref() {
             "black" => ChatColor::Black,
             "dark_blue" => ChatColor::DarkBlue,
@@ -101,19 +101,19 @@ impl Serialize for ClickEvent {
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum ClickEventType {
-    String(FreezeStr),
+    String(FrozenStr),
     U32(u32),
 }
 
 #[derive(Deserialize)]
 pub(crate) struct ClickEventData {
-    action: FreezeStr,
+    action: FrozenStr,
     value: ClickEventType,
 }
 
 pub enum ClickEventDeserializeErr {
-    WrongKey(FreezeStr),
-    NoValuFound(FreezeStr),
+    WrongKey(FrozenStr),
+    NoValuFound(FrozenStr),
 }
 
 impl Display for ClickEventDeserializeErr {
@@ -179,19 +179,19 @@ impl Serialize for HoverEvent {
 #[derive(Deserialize)]
 #[serde(untagged)]
 enum HoverEventType {
-    String(FreezeStr),
-    Chat(ChatComponent),
+    String(FrozenStr),
+    Chat(Chat),
 }
 
 #[derive(Deserialize)]
 pub(crate) struct HoverEventData {
-    action: FreezeStr,
+    action: FrozenStr,
     value: HoverEventType,
 }
 
 pub enum HoverEventDeserializeErr {
-    WrongKey(FreezeStr),
-    NoValueFound(FreezeStr),
+    WrongKey(FrozenStr),
+    NoValueFound(FrozenStr),
 }
 
 impl Display for HoverEventDeserializeErr {
@@ -229,7 +229,7 @@ impl TryFrom<HoverEventData> for HoverEvent {
     }
 }
 
-impl Serialize for ComponentStyle {
+impl Serialize for Style {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
