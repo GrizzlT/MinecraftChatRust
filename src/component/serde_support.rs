@@ -1,27 +1,27 @@
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 
-use crate::ComponentType;
+use crate::Component;
 use serde::Deserialize;
 
-use crate::style::ComponentStyle;
+use crate::style::Style;
 
-use super::ChatComponent;
+use super::Chat;
 
 #[derive(Deserialize)]
 pub(crate) struct FakeChatComponent {
     #[serde(flatten)]
-    kind: ComponentType,
+    kind: Component,
     #[serde(flatten)]
-    style: ComponentStyle,
+    style: Style,
     #[serde(rename = "extra", default)]
-    siblings: Vec<ChatComponent>,
+    siblings: Vec<Chat>,
 }
 
 #[doc(hidden)]
-impl From<FakeChatComponent> for ChatComponent {
+impl From<FakeChatComponent> for Chat {
     fn from(component: FakeChatComponent) -> Self {
-        ChatComponent {
+        Chat {
             kind: component.kind,
             style: component.style,
             siblings: component.siblings,
@@ -33,7 +33,7 @@ impl From<FakeChatComponent> for ChatComponent {
 #[serde(untagged)]
 pub(crate) enum ChatComponentType {
     Primitive(String),
-    Array(Vec<ChatComponent>),
+    Array(Vec<Chat>),
     Object(FakeChatComponent),
 }
 
@@ -47,13 +47,13 @@ impl Display for ChatComponentDeserializeErr {
     }
 }
 
-impl TryFrom<ChatComponentType> for ChatComponent {
+impl TryFrom<ChatComponentType> for Chat {
     type Error = ChatComponentDeserializeErr;
 
     fn try_from(value: ChatComponentType) -> Result<Self, Self::Error> {
         match value {
             ChatComponentType::Primitive(text) => {
-                Ok(ChatComponent::text(text, ComponentStyle::v1_16()))
+                Ok(Chat::text(text, Style::v1_16()))
             }
             ChatComponentType::Array(array) => {
                 let mut iterator = array.into_iter();
@@ -66,7 +66,7 @@ impl TryFrom<ChatComponentType> for ChatComponent {
                 }
                 Ok(first)
             }
-            ChatComponentType::Object(fake) => Ok(ChatComponent::from(fake)),
+            ChatComponentType::Object(fake) => Ok(Chat::from(fake)),
         }
     }
 }

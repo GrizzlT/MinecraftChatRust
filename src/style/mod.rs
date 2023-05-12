@@ -1,28 +1,15 @@
-use crate::{component::ChatComponent, freeze::FreezeStr};
+use crate::{component::Chat, freeze::FrozenStr};
 
 #[cfg(feature = "serde")]
 use serde::Deserialize;
+use uuid::Uuid;
 #[cfg(feature = "serde")]
 mod serde_support;
 
-/// The version number of the Minecraft protocol for 1.7
-pub const VERSION_1_7: u32 = 4;
-/// The version number of the Minecraft protocol for 1.8
-pub const VERSION_1_8: u32 = 47;
-/// The version number of the Minecraft protocol for 1.15
-pub const VERSION_1_15: u32 = 573;
-/// The version number of the Minecraft protocol for 1.16
-pub const VERSION_1_16: u32 = 735;
-
 /// The style of a [`ChatComponent`]
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
-pub struct ComponentStyle {
-    #[cfg_attr(
-        feature = "serde",
-        serde(skip, default = "serde_support::default_style_version")
-    )]
-    pub version: u32,
+pub struct Style {
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub underlined: Option<bool>,
@@ -30,46 +17,18 @@ pub struct ComponentStyle {
     pub obfuscated: Option<bool>,
     pub color: Option<ChatColor>,
     /// This field is ignored for versions older than 1.8
-    pub insertion: Option<FreezeStr>,
+    pub insertion: Option<FrozenStr>,
     /// This field is ignored for versions older than 1.16
-    pub font: Option<FreezeStr>,
+    pub font: Option<FrozenStr>,
     #[cfg_attr(feature = "serde", serde(rename = "clickEvent"))]
     pub click_event: Option<ClickEvent>,
     #[cfg_attr(feature = "serde", serde(rename = "hoverEvent"))]
     pub hover_event: Option<HoverEvent>,
 }
 
-impl ComponentStyle {
-    pub fn v1_7() -> Self {
-        ComponentStyle::new(4)
-    }
-
-    pub fn v1_8() -> Self {
-        ComponentStyle::new(47)
-    }
-
-    pub fn v1_15() -> Self {
-        ComponentStyle::new(573)
-    }
-
-    pub fn v1_16() -> Self {
-        ComponentStyle::new(735)
-    }
-
-    pub fn new(version: u32) -> Self {
-        ComponentStyle {
-            version,
-            bold: None,
-            italic: None,
-            underlined: None,
-            strikethrough: None,
-            obfuscated: None,
-            color: None,
-            insertion: None,
-            font: None,
-            click_event: None,
-            hover_event: None,
-        }
+impl Style {
+    pub fn new() -> Self {
+        Style::default()
     }
 
     pub fn and_color(mut self, color: Option<ChatColor>) -> Self {
@@ -78,9 +37,7 @@ impl ComponentStyle {
     }
 
     pub fn color(mut self, color: ChatColor) -> Self {
-        if self.color.is_none() {
-            self.color = Some(color);
-        }
+        self.color = Some(color);
         self
     }
 
@@ -109,12 +66,12 @@ impl ComponentStyle {
         self
     }
 
-    pub fn font<T: Into<FreezeStr>>(mut self, font: Option<T>) -> Self {
+    pub fn font<T: Into<FrozenStr>>(mut self, font: Option<T>) -> Self {
         self.font = font.map(|font| font.into());
         self
     }
 
-    pub fn insertion<T: Into<FreezeStr>>(mut self, insertion: Option<T>) -> Self {
+    pub fn insertion<T: Into<FrozenStr>>(mut self, insertion: Option<T>) -> Self {
         self.insertion = insertion.map(|insertion| insertion.into());
         self
     }
@@ -128,49 +85,12 @@ impl ComponentStyle {
         self.hover_event = hover_event;
         self
     }
-
-    pub fn version(mut self, to: u32) -> Self {
-        self.version = to;
-        self
-    }
-
-    /// Resets all fields to default (being [`None`]).
-    pub fn reset(&mut self) {
-        self.bold = None;
-        self.italic = None;
-        self.underlined = None;
-        self.strikethrough = None;
-        self.obfuscated = None;
-        self.color = None;
-        self.insertion = None;
-        self.font = None;
-        self.click_event = None;
-        self.hover_event = None;
-    }
-
-    pub fn freeze(&mut self) {
-        if let Some(color) = &mut self.color {
-            color.freeze();
-        }
-        if let Some(insertion) = &mut self.insertion {
-            insertion.freeze();
-        }
-        if let Some(font) = &mut self.font {
-            font.freeze();
-        }
-        if let Some(event) = &mut self.click_event {
-            event.freeze();
-        }
-        if let Some(event) = &mut self.hover_event {
-            event.freeze();
-        }
-    }
 }
 
 /// The different colors a [`ChatComponent`] can have.
 /// ## TODO
 /// Automatically find nearest value when serializing [`ChatColor::Custom`] for older versions
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ChatColor {
     Black,
     DarkBlue,
@@ -191,46 +111,40 @@ pub enum ChatColor {
     /// This field is ignored for versions older than 1.16.
     ///
     /// See [`ChatColor::custom()`].
-    Custom(FreezeStr),
+    Custom(FrozenStr),
     Reset,
 }
 
 impl ChatColor {
-    pub fn custom<T: Into<FreezeStr>>(color: T) -> ChatColor {
+    pub fn custom<T: Into<FrozenStr>>(color: T) -> ChatColor {
         ChatColor::Custom(color.into())
-    }
-
-    pub fn freeze(&mut self) {
-        match self {
-            Self::Custom(str) => str.freeze(),
-            _ => {}
-        }
     }
 }
 
 /// A ClickEvent useful in a chat message or book.
-#[derive(Clone, Debug)]
+/// TODO: feature gated `open_file` option
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "serde", serde(try_from = "serde_support::ClickEventData"))]
 pub enum ClickEvent {
-    OpenUrl(FreezeStr),
-    RunCommand(FreezeStr),
-    SuggestCommand(FreezeStr),
+    OpenUrl(FrozenStr),
+    RunCommand(FrozenStr),
+    SuggestCommand(FrozenStr),
     ChangePage(u32),
     /// This field is ignored for versions older than 1.15.
-    CopyToClipBoard(FreezeStr),
+    CopyToClipBoard(FrozenStr),
 }
 
 impl ClickEvent {
-    pub fn url<T: Into<FreezeStr>>(url: T) -> Self {
+    pub fn url<T: Into<FrozenStr>>(url: T) -> Self {
         Self::OpenUrl(url.into())
     }
 
-    pub fn command<T: Into<FreezeStr>>(cmd: T) -> Self {
+    pub fn command<T: Into<FrozenStr>>(cmd: T) -> Self {
         Self::RunCommand(cmd.into())
     }
 
-    pub fn suggest<T: Into<FreezeStr>>(cmd: T) -> Self {
+    pub fn suggest<T: Into<FrozenStr>>(cmd: T) -> Self {
         Self::SuggestCommand(cmd.into())
     }
 
@@ -238,18 +152,8 @@ impl ClickEvent {
         Self::ChangePage(page.into())
     }
 
-    pub fn clipboard<T: Into<FreezeStr>>(str: T) -> Self {
+    pub fn clipboard<T: Into<FrozenStr>>(str: T) -> Self {
         Self::CopyToClipBoard(str.into())
-    }
-
-    pub fn freeze(&mut self) {
-        match self {
-            Self::OpenUrl(str) => str.freeze(),
-            Self::RunCommand(str) => str.freeze(),
-            Self::SuggestCommand(str) => str.freeze(),
-            Self::CopyToClipBoard(str) => str.freeze(),
-            _ => {}
-        }
     }
 }
 
@@ -257,21 +161,51 @@ impl ClickEvent {
 /// ## TODO
 /// Change 'value' field to 'contents' when serializing for 1.16+,
 /// also add more sophisticated `item` and `entity` data structures
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "serde", serde(try_from = "serde_support::HoverEventData"))]
 pub enum HoverEvent {
-    ShowText(Box<ChatComponent>),
-    ShowItem(FreezeStr),
-    ShowEntity(FreezeStr),
+    ShowText(Box<Chat>),
+    ShowItem(ItemStack),
+    ShowEntity(FrozenStr),
 }
 
-impl HoverEvent {
-    pub fn freeze(&mut self) {
-        match self {
-            HoverEvent::ShowText(text) => text.freeze(),
-            HoverEvent::ShowItem(str) => str.freeze(),
-            HoverEvent::ShowEntity(str) => str.freeze(),
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ItemStack {
+    pub id: FrozenStr,
+    pub count: i32,
+    pub tag: FrozenStr,
+}
+
+impl ItemStack {
+    pub fn new<I, U>(id: I, count: i32, tag: U) -> Self
+    where
+        I: Into<FrozenStr>,
+        U: Into<FrozenStr>,
+    {
+        Self {
+            id: id.into(),
+            count,
+            tag: tag.into(),
+        }
+    }
+}
+
+pub struct EntityTooltip {
+    pub name: Box<Chat>,
+    pub kind: FrozenStr,
+    pub id: Uuid,
+}
+
+impl EntityTooltip {
+    pub fn new<I>(name: Chat, kind: I, id: Uuid) -> Self
+    where
+        I: Into<FrozenStr>,
+    {
+        Self {
+            name: Box::new(name),
+            kind: kind.into(),
+            id,
         }
     }
 }
