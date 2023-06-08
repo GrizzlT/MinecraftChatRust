@@ -1,8 +1,11 @@
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 
-use crate::Component;
-use serde::Deserialize;
+use crate::{Component, TextComponent, ScoreComponent, KeybindComponent};
+use crate::freeze::FrozenStr;
+use crate::style::serde_support::StyleVersioned;
+use serde::ser::SerializeSeq;
+use serde::{Deserialize, Serialize, Serializer};
 
 use crate::style::Style;
 
@@ -53,7 +56,7 @@ impl TryFrom<ChatComponentType> for Chat {
     fn try_from(value: ChatComponentType) -> Result<Self, Self::Error> {
         match value {
             ChatComponentType::Primitive(text) => {
-                Ok(Chat::text(text, Style::v1_16()))
+                Ok(Chat::text(text))
             }
             ChatComponentType::Array(array) => {
                 let mut iterator = array.into_iter();
@@ -69,4 +72,110 @@ impl TryFrom<ChatComponentType> for Chat {
             ChatComponentType::Object(fake) => Ok(Chat::from(fake)),
         }
     }
+}
+
+impl Chat {
+    pub fn serialize_str(&self, version: i32) -> serde_json::Result<String> {
+        serde_json::to_string(&SerializeChat {
+            kind: (version, &self.kind).into(),
+            style: (version, &self.style).into(),
+            siblings: (version, &self.siblings),
+        })
+    }
+
+    pub fn serialize_vec(&self, version: i32) -> serde_json::Result<Vec<u8>> {
+        serde_json::to_vec(&SerializeChat {
+            kind: (version, &self.kind).into(),
+            style: (version, &self.style).into(),
+            siblings: (version, &self.siblings),
+        })
+    }
+}
+
+#[derive(Serialize)]
+pub(crate) struct SerializeTranslation<'a> {
+    #[serde(rename = "translate")]
+    key: &'a FrozenStr,
+    #[serde(skip_serializing_if = "siblings_is_empty", default)]
+    #[serde(serialize_with = "serialize_siblings")]
+    with: (i32, &'a Vec<Chat>),
+}
+
+#[derive(Serialize)]
+pub(crate) struct SerializeSelector<'a> {
+    selector: &'a FrozenStr,
+    #[serde(rename = "separator")]
+    #[serde(skip_serializing_if = "version_option_none")]
+    #[serde(serialize_with = "serialize_chat_option")]
+    sep: (i32, &'a Option<Box<Chat>>),
+}
+
+pub(crate) fn version_option_none((_, value): &(i32, &Option<Box<Chat>>)) -> bool {
+    value.is_none()
+}
+
+pub(crate) fn serialize_chat_option<S: Serializer>((version, chat): &(i32, &Option<Box<Chat>>), serializer: S) -> Result<S::Ok, S::Error> {
+    match chat {
+        Some(c) => SerializeChat {
+            kind: (*version, &c.kind).into(),
+            style: (*version, &c.style).into(),
+            siblings: (*version, &c.siblings),
+        }.serialize(serializer),
+        None => serializer.serialize_none(),
+    }
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+pub(crate) enum SerializeComponent<'a> {
+    Text(&'a TextComponent),
+    Translation(SerializeTranslation<'a>),
+    Score(&'a ScoreComponent),
+    Selector(SerializeSelector<'a>),
+    Keybind(&'a KeybindComponent),
+}
+
+impl<'a> From<(i32, &'a Component)> for SerializeComponent<'a> {
+    fn from((version, component): (i32, &'a Component)) -> Self {
+        match component {
+            Component::Text(v) => Self::Text(v),
+            Component::Translation(v) => Self::Translation(SerializeTranslation {
+                key: &v.key,
+                with: (version, &v.with),
+            }),
+            Component::Score(v) => Self::Score(v),
+            Component::Selector(v) => Self::Selector(SerializeSelector {
+                selector: &v.selector,
+                sep: (version, &v.sep),
+            }),
+            Component::Keybind(v) => Self::Keybind(v),
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub(crate) struct SerializeChat<'a> {
+    #[serde(flatten)]
+    pub kind: SerializeComponent<'a>,
+    #[serde(flatten)]
+    pub style: StyleVersioned<'a>,
+    #[serde(rename = "extra", skip_serializing_if = "siblings_is_empty", default)]
+    #[serde(serialize_with = "serialize_siblings")]
+    pub siblings: (i32, &'a Vec<Chat>),
+}
+
+fn serialize_siblings<S: Serializer>((version, siblings): &(i32, &Vec<Chat>), serializer: S) -> Result<S::Ok, S::Error> {
+    let mut serializer = serializer.serialize_seq(Some(siblings.len()))?;
+    for sibling in *siblings {
+        serializer.serialize_element(&SerializeChat {
+            kind: (*version, &sibling.kind).into(),
+            style: (*version, &sibling.style).into(),
+            siblings: (*version, &sibling.siblings),
+        })?;
+    }
+    serializer.end()
+}
+
+fn siblings_is_empty((_, siblings): &(i32, &Vec<Chat>)) -> bool {
+    siblings.is_empty()
 }

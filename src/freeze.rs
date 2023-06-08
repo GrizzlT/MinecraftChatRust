@@ -52,3 +52,18 @@ impl<'de> Deserialize<'de> for FrozenStr {
         Ok(str.into())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use serde_test::{assert_tokens, Token};
+
+    use super::*;
+
+    #[test]
+    fn test_serde() {
+        let str: FrozenStr = "Hello world".into();
+        assert_tokens(&str, &[
+            Token::BorrowedStr("Hello world"),
+        ]);
+    }
+}

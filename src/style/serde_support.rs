@@ -2,12 +2,15 @@ use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 use std::ops::Deref;
 
-use crate::component::Chat;
+use crate::component::serde_support::{SerializeChat, serialize_chat_option, version_option_none};
+use crate::{VERSION_1_16, Chat};
 use crate::freeze::FrozenStr;
-use serde::ser::{SerializeMap, SerializeStruct};
+use serde::de::{Unexpected, Visitor, self};
+use serde::ser::{SerializeMap, SerializeStruct, self};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use uuid::Uuid;
 
-use crate::style::{ChatColor, ClickEvent, Style, HoverEvent, VERSION_1_16};
+use crate::style::{ChatColor, ClickEvent, Style, HoverEvent};
 
 impl Serialize for ChatColor {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -37,6 +40,7 @@ impl Serialize for ChatColor {
     }
 }
 
+// TODO: write unit tests
 impl<'de> Deserialize<'de> for ChatColor {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -61,7 +65,19 @@ impl<'de> Deserialize<'de> for ChatColor {
             "yellow" => ChatColor::Yellow,
             "white" => ChatColor::White,
             "reset" => ChatColor::Reset,
-            _ => ChatColor::Custom(input),
+            custom => {
+                let error = serde::de::Error::invalid_value(Unexpected::Str(custom), &"a 6 digit hex color prefixed by '#'");
+                if custom.len() != 7 || !custom.starts_with('#') {
+                    return Err(error);
+                } else {
+                    for c in custom.chars() {
+                        if !"0123456789abcdefABCDEF".contains(c) {
+                            return Err(error);
+                        }
+                    }
+                    ChatColor::custom(input)
+                }
+            }
         })
     }
 }
@@ -87,7 +103,7 @@ impl Serialize for ClickEvent {
             }
             ClickEvent::ChangePage(page) => {
                 item.serialize_field("action", "change_page")?;
-                item.serialize_field("value", &page.to_string())?;
+                item.serialize_field("value", page)?;
             }
             ClickEvent::CopyToClipBoard(value) => {
                 item.serialize_field("action", "copy_to_clipboard")?;
@@ -113,14 +129,14 @@ pub(crate) struct ClickEventData {
 
 pub enum ClickEventDeserializeErr {
     WrongKey(FrozenStr),
-    NoValuFound(FrozenStr),
+    NoValueFound(FrozenStr),
 }
 
 impl Display for ClickEventDeserializeErr {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             ClickEventDeserializeErr::WrongKey(str) => write!(f, "{} is not a valid action!", str),
-            ClickEventDeserializeErr::NoValuFound(key) => write!(f, "No value found for {}", key),
+            ClickEventDeserializeErr::NoValueFound(key) => write!(f, "No value found for {}", key),
         }
     }
 }
@@ -133,160 +149,210 @@ impl TryFrom<ClickEventData> for ClickEvent {
             if let ClickEventType::U32(value) = data.value {
                 Ok(ClickEvent::ChangePage(value))
             } else {
-                Err(ClickEventDeserializeErr::NoValuFound(data.action))
+                Err(ClickEventDeserializeErr::NoValueFound(data.action))
+            }
+        } else if let ClickEventType::String(str) = data.value {
+            match data.action.deref() {
+                "open_url" => Ok(ClickEvent::OpenUrl(str)),
+                "run_command" => Ok(ClickEvent::RunCommand(str)),
+                "suggest_command" => Ok(ClickEvent::SuggestCommand(str)),
+                "copy_to_clipboard" => Ok(ClickEvent::CopyToClipBoard(str)),
+                _ => Err(ClickEventDeserializeErr::WrongKey(str)),
             }
         } else {
-            if let ClickEventType::String(str) = data.value {
-                match data.action.deref() {
-                    "open_url" => Ok(ClickEvent::OpenUrl(str)),
-                    "run_command" => Ok(ClickEvent::RunCommand(str)),
-                    "suggest_command" => Ok(ClickEvent::SuggestCommand(str)),
-                    "copy_to_clipboard" => Ok(ClickEvent::CopyToClipBoard(str)),
-                    _ => Err(ClickEventDeserializeErr::WrongKey(str)),
-                }
-            } else {
-                Err(ClickEventDeserializeErr::WrongKey(data.action))
-            }
+            Err(ClickEventDeserializeErr::WrongKey(data.action))
         }
     }
 }
 
-/// TODO: change serialization to `contents` instead of `value`
-impl Serialize for HoverEvent {
+#[derive(Serialize)]
+struct SerializeEntity<'a> {
+    #[serde(skip_serializing_if = "version_option_none")]
+    #[serde(serialize_with = "serialize_chat_option")]
+    pub name: (i32, &'a Option<Box<Chat>>),
+    #[serde(rename = "type", skip_serializing_if = "Option::is_none")]
+    pub kind: &'a Option<FrozenStr>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: &'a Option<Uuid>,
+}
+
+struct HoverEventSerialize<'a> {
+    pub version: i32,
+    pub event: &'a HoverEvent,
+}
+
+impl<'a> From<(i32, &'a HoverEvent)> for HoverEventSerialize<'a> {
+    fn from((version, event): (i32, &'a HoverEvent)) -> Self {
+        Self {
+            version,
+            event,
+        }
+    }
+}
+
+impl<'a> Serialize for HoverEventSerialize<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer,
+        S: Serializer
     {
         let mut event = serializer.serialize_struct("hoverEvent", 2)?;
-        match self {
-            HoverEvent::ShowText(text) => {
-                event.serialize_field("action", "show_text")?;
-                event.serialize_field("value", text)?;
+        if let HoverEvent::ShowText(ref text) = self.event {
+            event.serialize_field("action", "show_text")?;
+            event.serialize_field(if self.version < VERSION_1_16 { "value" } else { "contents" }, &SerializeChat {
+                kind: (self.version, &text.kind).into(),
+                style: (self.version, &text.style).into(),
+                siblings: (self.version, &text.siblings),
+            })?;
+        } else if self.version < VERSION_1_16 {
+            match &self.event {
+                HoverEvent::ShowItem(item) => {
+                    event.serialize_field("action", "show_item")?;
+                    event.serialize_field("value", &fastsnbt::to_string(&item).map_err(|_| ser::Error::custom("invalid item"))?)?;
+                },
+                HoverEvent::ShowEntity(entity) => {
+                    event.serialize_field("action", "show_entity")?;
+                    event.serialize_field("value", &fastsnbt::to_string(&SerializeEntity {
+                        name: (self.version, &entity.name),
+                        kind: &entity.kind,
+                        id: &entity.id,
+                    }).map_err(|_| ser::Error::custom("invalid entity data"))?)?;
+                },
+                _ => unreachable!("third arm is already matched earlier"),
             }
-            HoverEvent::ShowItem(item) => {
-                event.serialize_field("action", "show_item")?;
-                event.serialize_field("value", item)?;
-            }
-            HoverEvent::ShowEntity(entity) => {
-                event.serialize_field("action", "show_entity")?;
-                event.serialize_field("value", entity)?;
+        } else {
+            match &self.event {
+                HoverEvent::ShowItem(item) => {
+                    event.serialize_field("action", "show_item")?;
+                    event.serialize_field("contents", &item)?;
+                },
+                HoverEvent::ShowEntity(entity) => {
+                    event.serialize_field("action", "show_entity")?;
+                    event.serialize_field("contents", &SerializeEntity {
+                        name: (self.version, &entity.name),
+                        kind: &entity.kind,
+                        id: &entity.id,
+                    })?;
+                },
+                _ => unreachable!("third arm is already matched earlier"),
             }
         }
         event.end()
     }
 }
 
-#[derive(Deserialize)]
-#[serde(untagged)]
-enum HoverEventType {
-    String(FrozenStr),
-    Chat(Chat),
-}
+impl<'de> Deserialize<'de> for HoverEvent {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>
+    {
+        struct HoverVisitor;
 
-#[derive(Deserialize)]
-pub(crate) struct HoverEventData {
-    action: FrozenStr,
-    value: HoverEventType,
-}
+        impl<'de> Visitor<'de> for HoverVisitor {
+            type Value = HoverEvent;
 
-pub enum HoverEventDeserializeErr {
-    WrongKey(FrozenStr),
-    NoValueFound(FrozenStr),
-}
-
-impl Display for HoverEventDeserializeErr {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        match self {
-            HoverEventDeserializeErr::WrongKey(str) => write!(f, "{} is not a valid action!", str),
-            HoverEventDeserializeErr::NoValueFound(key) => {
-                write!(f, "Couldn't find appropriate value for {}", key)
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("hover event data")
             }
-        }
-    }
-}
 
-impl TryFrom<HoverEventData> for HoverEvent {
-    type Error = HoverEventDeserializeErr;
-
-    fn try_from(data: HoverEventData) -> Result<Self, Self::Error> {
-        if data.action.deref() == "show_text" {
-            if let HoverEventType::Chat(component) = data.value {
-                Ok(HoverEvent::ShowText(Box::new(component)))
-            } else {
-                Err(HoverEventDeserializeErr::NoValueFound(data.action))
-            }
-        } else {
-            if let HoverEventType::String(str) = data.value {
-                match data.action.deref() {
-                    "show_item" => Ok(HoverEvent::ShowItem(str)),
-                    "show_entity" => Ok(HoverEvent::ShowEntity(str)),
-                    _ => Err(HoverEventDeserializeErr::WrongKey(str)),
+            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+                where
+                    A: serde::de::MapAccess<'de>,
+            {
+                let action: &str;
+                let key = map.next_key::<&str>()?.ok_or(de::Error::missing_field("action"))?;
+                if key == "action" {
+                    action = map.next_value()?;
+                    let key = map.next_key::<&str>()?.ok_or(de::Error::missing_field("contents"))?;
+                    match (key, action) {
+                        ("contents", "show_text") => Ok(HoverEvent::ShowText(Box::new(map.next_value()?))),
+                        ("contents", "show_item") => Ok(HoverEvent::ShowItem(map.next_value()?)),
+                        ("contents", "show_entity") => Ok(HoverEvent::ShowEntity(map.next_value()?)),
+                        ("value", "show_text") => Ok(HoverEvent::ShowText(Box::new(map.next_value()?))),
+                        ("value", "show_item") => Ok(HoverEvent::ShowItem(fastsnbt::from_str(map.next_value()?)
+                            .map_err(|e| de::Error::custom(e.to_string()))?)),
+                        ("value", "show_entity") => Ok(HoverEvent::ShowEntity(fastsnbt::from_str(map.next_value()?)
+                            .map_err(|e| de::Error::custom(e.to_string()))?)),
+                        ("contents", _ ) => Err(de::Error::invalid_value(Unexpected::Str(key), &"`show_text`, `show_item` or `show_entity`")),
+                        ("value", _ ) => Err(de::Error::invalid_value(Unexpected::Str(key), &"`show_text`, `show_item` or `show_entity`")),
+                        _ => Err(de::Error::invalid_value(Unexpected::Str(key), &"`contents`, `value`")),
+                    }
+                } else {
+                    Err(de::Error::invalid_value(Unexpected::Str(key), &"`action`"))
                 }
-            } else {
-                Err(HoverEventDeserializeErr::WrongKey(data.action))
             }
+        }
+
+        deserializer.deserialize_map(HoverVisitor)
+    }
+}
+
+pub(crate) struct StyleVersioned<'a> {
+    pub version: i32,
+    pub style: &'a Style,
+}
+
+impl<'a> From<(i32, &'a Style)> for StyleVersioned<'a> {
+    fn from((version, style): (i32, &'a Style)) -> Self {
+        Self {
+            version,
+            style,
         }
     }
 }
 
-impl Serialize for Style {
+impl<'a> Serialize for StyleVersioned<'a> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
+        let version = self.version;
+        let style = &self.style;
         let mut map = serializer.serialize_map(None)?;
-        if self.bold.is_some() {
-            map.serialize_entry("bold", &self.bold)?;
+        if style.bold.is_some() {
+            map.serialize_entry("bold", &style.bold)?;
         }
-        if self.italic.is_some() {
-            map.serialize_entry("italic", &self.italic)?;
+        if style.italic.is_some() {
+            map.serialize_entry("italic", &style.italic)?;
         }
-        if self.underlined.is_some() {
-            map.serialize_entry("underlined", &self.underlined)?;
+        if style.underlined.is_some() {
+            map.serialize_entry("underlined", &style.underlined)?;
         }
-        if self.strikethrough.is_some() {
-            map.serialize_entry("strikethrough", &self.strikethrough)?;
+        if style.strikethrough.is_some() {
+            map.serialize_entry("strikethrough", &style.strikethrough)?;
         }
-        if self.obfuscated.is_some() {
-            map.serialize_entry("obfuscated", &self.obfuscated)?;
+        if style.obfuscated.is_some() {
+            map.serialize_entry("obfuscated", &style.obfuscated)?;
         }
-        if self.color.is_some() {
-            if let Some(ChatColor::Custom(_)) = self.color {
-                if self.version >= 713 {
-                    map.serialize_entry("color", &self.color)?;
+        if style.color.is_some() {
+            if let Some(ChatColor::Custom(_)) = style.color {
+                if version >= 713 {
+                    map.serialize_entry("color", &style.color)?;
                 }
             } else {
-                map.serialize_entry("color", &self.color)?;
+                map.serialize_entry("color", &style.color)?;
             }
         }
-        if self.version >= 5 {
-            if self.insertion.is_some() {
-                map.serialize_entry("insertion", &self.insertion)?;
+        if version >= 5 {
+            if style.insertion.is_some() {
+                map.serialize_entry("insertion", &style.insertion)?;
             }
-            if self.version >= 713 {
-                if self.font.is_some() {
-                    map.serialize_entry("font", &self.font)?;
-                }
+            if version >= 713 && style.font.is_some() {
+                map.serialize_entry("font", &style.font)?;
             }
         }
-        if self.click_event.is_some() {
-            if let Some(ClickEvent::CopyToClipBoard(_)) = self.click_event {
-                if self.version >= 558 {
-                    map.serialize_entry("clickEvent", &self.click_event)?;
+        if style.click_event.is_some() {
+            if let Some(ClickEvent::CopyToClipBoard(_)) = style.click_event {
+                if version >= 558 {
+                    map.serialize_entry("clickEvent", &style.click_event)?;
                 }
             } else {
-                map.serialize_entry("clickEvent", &self.click_event)?;
+                map.serialize_entry("clickEvent", &style.click_event)?;
             }
         }
-        if self.hover_event.is_some() {
-            map.serialize_entry("hoverEvent", &self.hover_event)?;
+        if let Some(hover_event) = &style.hover_event {
+            map.serialize_entry::<_, HoverEventSerialize>("hoverEvent", &(version, hover_event).into())?;
         }
 
         map.end()
     }
-}
-
-#[inline]
-pub(crate) fn default_style_version() -> u32 {
-    VERSION_1_16
 }

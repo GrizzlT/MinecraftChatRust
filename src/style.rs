@@ -1,12 +1,14 @@
+#[cfg(feature = "serde")]
+
 use crate::{component::Chat, freeze::FrozenStr};
 
 #[cfg(feature = "serde")]
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 #[cfg(feature = "serde")]
-mod serde_support;
+pub(crate) mod serde_support;
 
-/// The style of a [`ChatComponent`]
+/// The style of a [`Chat`]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct Style {
@@ -87,9 +89,8 @@ impl Style {
     }
 }
 
-/// The different colors a [`ChatComponent`] can have.
-/// ## TODO
-/// Automatically find nearest value when serializing [`ChatColor::Custom`] for older versions
+/// The different colors a [`Chat`] can have.
+/// ## TODO: Automatically find nearest value when serializing [`ChatColor::Custom`] for older versions
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum ChatColor {
     Black,
@@ -158,27 +159,25 @@ impl ClickEvent {
 }
 
 /// A HoverEvent useful in a chat message or book.
-/// ## TODO
-/// Change 'value' field to 'contents' when serializing for 1.16+,
-/// also add more sophisticated `item` and `entity` data structures
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Deserialize))]
-#[cfg_attr(feature = "serde", serde(try_from = "serde_support::HoverEventData"))]
 pub enum HoverEvent {
     ShowText(Box<Chat>),
     ShowItem(ItemStack),
-    ShowEntity(FrozenStr),
+    ShowEntity(EntityTooltip),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct ItemStack {
     pub id: FrozenStr,
-    pub count: i32,
-    pub tag: FrozenStr,
+    #[cfg_attr(feature = "serde", serde(rename = "Count", skip_serializing_if = "Option::is_none"))]
+    pub count: Option<i32>,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub tag: Option<FrozenStr>,
 }
 
 impl ItemStack {
-    pub fn new<I, U>(id: I, count: i32, tag: U) -> Self
+    pub fn new<I, U>(id: I, count: Option<i32>, tag: Option<U>) -> Self
     where
         I: Into<FrozenStr>,
         U: Into<FrozenStr>,
@@ -186,26 +185,50 @@ impl ItemStack {
         Self {
             id: id.into(),
             count,
-            tag: tag.into(),
+            tag: tag.map(|t| t.into()),
         }
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct EntityTooltip {
-    pub name: Box<Chat>,
-    pub kind: FrozenStr,
-    pub id: Uuid,
+    pub name: Option<Box<Chat>>,
+    #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    pub kind: Option<FrozenStr>,
+    pub id: Option<Uuid>,
 }
 
 impl EntityTooltip {
-    pub fn new<I>(name: Chat, kind: I, id: Uuid) -> Self
+    pub fn new<I>(name: Option<Chat>, kind: Option<I>, id: Option<Uuid>) -> Self
     where
         I: Into<FrozenStr>,
     {
         Self {
-            name: Box::new(name),
-            kind: kind.into(),
+            name: name.map(Box::new),
+            kind: kind.map(|k| k.into()),
             id,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_itemstack() {
+        let itemstack = ItemStack::new("minecraft:clay", Some(10), Some("{other:0}"));
+        let str = fastsnbt::to_string(&itemstack).unwrap();
+        assert_eq!("{\"id\":\"minecraft:clay\",\"Count\":10,\"tag\":\"{other:0}\"}", &str);
+        let itemstack = ItemStack::new("minecraft:clay", None, Some("{other:2}"));
+        let str = fastsnbt::to_string(&itemstack).unwrap();
+        assert_eq!("{\"id\":\"minecraft:clay\",\"tag\":\"{other:2}\"}", &str);
+    }
+
+    #[test]
+    fn test_entity_snbt() {
+        let entity = EntityTooltip::new(None, Some("minecraft:cow"), Some(Uuid::from_u128(0)));
+        // TODO: add assert_eq!
     }
 }
