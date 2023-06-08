@@ -3,7 +3,7 @@ use std::ops::{Deref, DerefMut};
 use crate::{style::Style, freeze::FrozenStr};
 
 #[cfg(feature = "serde")]
-mod serde_support;
+pub(crate) mod serde_support;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 /// , a ([`Style`]) and a list of other `Chat` objects
 /// that inherit the style from their parent.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(
     feature = "serde",
     serde(try_from = "serde_support::ChatComponentType")
@@ -90,7 +90,7 @@ impl DerefMut for Chat {
 /// can be made up of. One component (`storage`-component, since 1.15) is missing,
 /// further research and contributions on this would be appreciated!
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "serde", serde(untagged))]
 pub enum Component {
     Text(TextComponent),
@@ -141,7 +141,7 @@ impl From<TextComponent> for Component {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct TranslationComponent {
     #[cfg_attr(feature = "serde", serde(rename = "translate"))]
     pub key: FrozenStr,
@@ -214,7 +214,7 @@ impl From<ScoreComponent> for Component {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct SelectorComponent {
     pub selector: FrozenStr,
     pub sep: Option<Box<Chat>>,
@@ -224,7 +224,7 @@ impl SelectorComponent {
     pub fn new<T: Into<FrozenStr>>(selector: T, sep: Option<Chat>) -> Self {
         SelectorComponent {
             selector: selector.into(),
-            sep: sep.map(|c| Box::new(c)),
+            sep: sep.map(Box::new),
         }
     }
 
