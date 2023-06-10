@@ -33,57 +33,57 @@ impl Style {
         Style::default()
     }
 
-    pub fn and_color(mut self, color: Option<ChatColor>) -> Self {
+    pub fn and_color(&mut self, color: Option<ChatColor>) -> &mut Self {
         self.color = color;
         self
     }
 
-    pub fn color(mut self, color: ChatColor) -> Self {
+    pub fn color(&mut self, color: ChatColor) -> &mut Self {
         self.color = Some(color);
         self
     }
 
-    pub fn bold(mut self, bold: bool) -> Self {
+    pub fn bold(&mut self, bold: bool) -> &mut Self {
         self.bold = Some(bold);
         self
     }
 
-    pub fn italic(mut self, italic: bool) -> Self {
+    pub fn italic(&mut self, italic: bool) -> &mut Self {
         self.italic = Some(italic);
         self
     }
 
-    pub fn underlined(mut self, underlined: bool) -> Self {
+    pub fn underlined(&mut self, underlined: bool) -> &mut Self {
         self.underlined = Some(underlined);
         self
     }
 
-    pub fn strikethrough(mut self, strikethrough: bool) -> Self {
+    pub fn strikethrough(&mut self, strikethrough: bool) -> &mut Self {
         self.strikethrough = Some(strikethrough);
         self
     }
 
-    pub fn obfuscated(mut self, obfuscated: bool) -> Self {
+    pub fn obfuscated(&mut self, obfuscated: bool) -> &mut Self {
         self.obfuscated = Some(obfuscated);
         self
     }
 
-    pub fn font<T: Into<FrozenStr>>(mut self, font: Option<T>) -> Self {
+    pub fn font<T: Into<FrozenStr>>(&mut self, font: Option<T>) -> &mut Self {
         self.font = font.map(|font| font.into());
         self
     }
 
-    pub fn insertion<T: Into<FrozenStr>>(mut self, insertion: Option<T>) -> Self {
+    pub fn insertion<T: Into<FrozenStr>>(&mut self, insertion: Option<T>) -> &mut Self {
         self.insertion = insertion.map(|insertion| insertion.into());
         self
     }
 
-    pub fn click(mut self, click_event: Option<ClickEvent>) -> Self {
+    pub fn click(&mut self, click_event: Option<ClickEvent>) -> &mut Self {
         self.click_event = click_event;
         self
     }
 
-    pub fn hover(mut self, hover_event: Option<HoverEvent>) -> Self {
+    pub fn hover(&mut self, hover_event: Option<HoverEvent>) -> &mut Self {
         self.hover_event = hover_event;
         self
     }
@@ -123,7 +123,7 @@ impl ChatColor {
 }
 
 /// A ClickEvent useful in a chat message or book.
-/// TODO: feature gated `open_file` option
+/// TODO: Discuess feature gated `open_file` option
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "serde", serde(try_from = "serde_support::ClickEventData"))]
@@ -224,11 +224,5 @@ mod tests {
         let itemstack = ItemStack::new("minecraft:clay", None, Some("{other:2}"));
         let str = fastsnbt::to_string(&itemstack).unwrap();
         assert_eq!("{\"id\":\"minecraft:clay\",\"tag\":\"{other:2}\"}", &str);
-    }
-
-    #[test]
-    fn test_entity_snbt() {
-        let entity = EntityTooltip::new(None, Some("minecraft:cow"), Some(Uuid::from_u128(0)));
-        // TODO: add assert_eq!
     }
 }

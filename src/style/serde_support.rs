@@ -201,7 +201,7 @@ impl<'a> Serialize for HoverEventSerialize<'a> {
             event.serialize_field(if self.version < VERSION_1_16 { "value" } else { "contents" }, &SerializeChat {
                 kind: (self.version, &text.kind).into(),
                 style: (self.version, &text.style).into(),
-                siblings: (self.version, &text.siblings),
+                children: (self.version, &text.children),
             })?;
         } else if self.version < VERSION_1_16 {
             match &self.event {
@@ -240,6 +240,7 @@ impl<'a> Serialize for HoverEventSerialize<'a> {
     }
 }
 
+// TODO: add docs specifying that unordered HoverEvents are not supported yet
 impl<'de> Deserialize<'de> for HoverEvent {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where

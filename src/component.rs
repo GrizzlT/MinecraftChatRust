@@ -1,17 +1,26 @@
-use std::ops::{Deref, DerefMut};
-
-use crate::{style::Style, freeze::FrozenStr};
+use crate::{style::Style, freeze::FrozenStr, ChatColor, HoverEvent, ClickEvent};
 
 #[cfg(feature = "serde")]
 pub(crate) mod serde_support;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// The central building block of Minecraft's JSON message format.
+/// A Minecraft chat component.
 ///
-/// In Rust, this consists of a ([`Component`])
-/// , a ([`Style`]) and a list of other `Chat` objects
-/// that inherit the style from their parent.
+/// There are different [`Component`] kinds.
+/// Every chat component has a [`Style`]
+/// and an optional list of child chat components. The children
+/// of a chat component inherit the chat component's style.
+///
+/// # Example
+/// ```
+/// use mc_chat::{Chat, ChatColor};
+///
+/// let chat = Chat::text("This is a bold and italic ")
+///     .bold(true)
+///     .italic(true)
+///     .child(Chat::text("text").color(ChatColor::Green));
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(
@@ -19,18 +28,29 @@ use serde::{Deserialize, Serialize};
     serde(try_from = "serde_support::ChatComponentType")
 )]
 pub struct Chat {
+    /// The kind of chat.
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub kind: Component,
+    /// The style of this component.
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub style: Style,
+    /// The children of this component.
     #[cfg_attr(
         feature = "serde",
         serde(rename = "extra", skip_serializing_if = "Vec::is_empty", default)
     )]
-    pub siblings: Vec<Chat>,
+    pub children: Vec<Chat>,
 }
 
 impl Chat {
+    /// Creates a new chat component based on a give [`Component`].
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::{Chat, Component, TextComponent};
+    ///
+    /// let chat = Chat::component(TextComponent::new("Chat component"));
+    /// ```
     pub fn component<C>(kind: C) -> Self
     where
         C: Into<Component>,
@@ -38,7 +58,7 @@ impl Chat {
         Chat {
             kind: kind.into(),
             style: Default::default(),
-            siblings: vec![],
+            children: vec![],
         }
     }
 
@@ -66,23 +86,64 @@ impl Chat {
         Chat::component(KeybindComponent::new(keybind))
     }
 
-    pub fn sibling(&mut self, sibling: Chat) -> &mut Self {
-        self.siblings.push(sibling);
+    pub fn child(mut self, child: Chat) -> Self {
+        self.children.push(child);
         self
     }
-}
 
-impl Deref for Chat {
-    type Target = Style;
-
-    fn deref(&self) -> &Self::Target {
-        &self.style
+    pub fn and_color(mut self, color: Option<ChatColor>) -> Self {
+        self.style.and_color(color);
+        self
     }
-}
 
-impl DerefMut for Chat {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.style
+    pub fn color(mut self, color: ChatColor) -> Self {
+        self.style.color(color);
+        self
+    }
+
+    pub fn bold(mut self, bold: bool) -> Self {
+        self.style.bold(bold);
+        self
+    }
+
+    pub fn italic(mut self, italic: bool) -> Self {
+        self.style.italic(italic);
+        self
+    }
+
+    pub fn underlined(mut self, underlined: bool) -> Self {
+        self.style.underlined(underlined);
+        self
+    }
+
+    pub fn strikethrough(mut self, strikethrough: bool) -> Self {
+        self.style.strikethrough(strikethrough);
+        self
+    }
+
+    pub fn obfuscated(mut self, obfuscated: bool) -> Self {
+        self.style.obfuscated(obfuscated);
+        self
+    }
+
+    pub fn font<T: Into<FrozenStr>>(mut self, font: Option<T>) -> Self {
+        self.style.font(font);
+        self
+    }
+
+    pub fn insertion<T: Into<FrozenStr>>(mut self, insertion: Option<T>) -> Self {
+        self.style.insertion(insertion);
+        self
+    }
+
+    pub fn click(mut self, click_event: Option<ClickEvent>) -> Self {
+        self.style.click(click_event);
+        self
+    }
+
+    pub fn hover(mut self, hover_event: Option<HoverEvent>) -> Self {
+        self.style.hover(hover_event);
+        self
     }
 }
 
