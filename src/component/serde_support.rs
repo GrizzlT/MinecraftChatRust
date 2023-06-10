@@ -18,7 +18,7 @@ pub(crate) struct FakeChatComponent {
     #[serde(flatten)]
     style: Style,
     #[serde(rename = "extra", default)]
-    siblings: Vec<Chat>,
+    children: Vec<Chat>,
 }
 
 #[doc(hidden)]
@@ -27,7 +27,7 @@ impl From<FakeChatComponent> for Chat {
         Chat {
             kind: component.kind,
             style: component.style,
-            siblings: component.siblings,
+            children: component.children,
         }
     }
 }
@@ -65,7 +65,7 @@ impl TryFrom<ChatComponentType> for Chat {
                     None => return Err(ChatComponentDeserializeErr::EmptyArray),
                 };
                 if iterator.len() != 0 {
-                    first.siblings = iterator.as_slice().to_vec();
+                    first.children = iterator.as_slice().to_vec();
                 }
                 Ok(first)
             }
@@ -79,7 +79,7 @@ impl Chat {
         serde_json::to_string(&SerializeChat {
             kind: (version, &self.kind).into(),
             style: (version, &self.style).into(),
-            siblings: (version, &self.siblings),
+            children: (version, &self.children),
         })
     }
 
@@ -87,7 +87,7 @@ impl Chat {
         serde_json::to_vec(&SerializeChat {
             kind: (version, &self.kind).into(),
             style: (version, &self.style).into(),
-            siblings: (version, &self.siblings),
+            children: (version, &self.children),
         })
     }
 }
@@ -96,8 +96,8 @@ impl Chat {
 pub(crate) struct SerializeTranslation<'a> {
     #[serde(rename = "translate")]
     key: &'a FrozenStr,
-    #[serde(skip_serializing_if = "siblings_is_empty", default)]
-    #[serde(serialize_with = "serialize_siblings")]
+    #[serde(skip_serializing_if = "children_is_empty", default)]
+    #[serde(serialize_with = "serialize_children")]
     with: (i32, &'a Vec<Chat>),
 }
 
@@ -119,7 +119,7 @@ pub(crate) fn serialize_chat_option<S: Serializer>((version, chat): &(i32, &Opti
         Some(c) => SerializeChat {
             kind: (*version, &c.kind).into(),
             style: (*version, &c.style).into(),
-            siblings: (*version, &c.siblings),
+            children: (*version, &c.children),
         }.serialize(serializer),
         None => serializer.serialize_none(),
     }
@@ -159,23 +159,23 @@ pub(crate) struct SerializeChat<'a> {
     pub kind: SerializeComponent<'a>,
     #[serde(flatten)]
     pub style: StyleVersioned<'a>,
-    #[serde(rename = "extra", skip_serializing_if = "siblings_is_empty", default)]
-    #[serde(serialize_with = "serialize_siblings")]
-    pub siblings: (i32, &'a Vec<Chat>),
+    #[serde(rename = "extra", skip_serializing_if = "children_is_empty", default)]
+    #[serde(serialize_with = "serialize_children")]
+    pub children: (i32, &'a Vec<Chat>),
 }
 
-fn serialize_siblings<S: Serializer>((version, siblings): &(i32, &Vec<Chat>), serializer: S) -> Result<S::Ok, S::Error> {
-    let mut serializer = serializer.serialize_seq(Some(siblings.len()))?;
-    for sibling in *siblings {
+fn serialize_children<S: Serializer>((version, children): &(i32, &Vec<Chat>), serializer: S) -> Result<S::Ok, S::Error> {
+    let mut serializer = serializer.serialize_seq(Some(children.len()))?;
+    for child in *children {
         serializer.serialize_element(&SerializeChat {
-            kind: (*version, &sibling.kind).into(),
-            style: (*version, &sibling.style).into(),
-            siblings: (*version, &sibling.siblings),
+            kind: (*version, &child.kind).into(),
+            style: (*version, &child.style).into(),
+            children: (*version, &child.children),
         })?;
     }
     serializer.end()
 }
 
-fn siblings_is_empty((_, siblings): &(i32, &Vec<Chat>)) -> bool {
-    siblings.is_empty()
+fn children_is_empty((_, children): &(i32, &Vec<Chat>)) -> bool {
+    children.is_empty()
 }

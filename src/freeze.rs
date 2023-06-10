@@ -2,6 +2,7 @@ use std::{sync::Arc, ops::Deref, fmt::Display};
 
 use serde::{Serialize, Deserialize};
 
+/// See the [module](self)'s documentation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FrozenStr {
     str: Arc<str>,

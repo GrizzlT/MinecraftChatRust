@@ -20,11 +20,8 @@ pub mod freeze;
 
 mod tests;
 
-pub use component::{
-    Chat, Component, KeybindComponent, ScoreComponent, SelectorComponent,
-    TextComponent, TranslationComponent,
-};
-pub use style::{ChatColor, ClickEvent, Style, HoverEvent};
+pub use component::*;
+pub use style::*;
 
 /// The version number of the Minecraft protocol for 1.7
 pub const VERSION_1_7: i32 = 4;
