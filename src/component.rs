@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 /// Every chat component has a [`Style`]
 /// and an optional list of child chat components. The children
 /// of a chat component inherit the chat component's style.
+/// This inherited style can be overwritten.
 ///
 /// # Example
 /// ```
@@ -20,6 +21,8 @@ use serde::{Deserialize, Serialize};
 ///     .bold(true)
 ///     .italic(true)
 ///     .child(Chat::text("text").color(ChatColor::Green));
+///
+/// assert_eq!("{\"text\":\"This is a bold and italic \",\"bold\":true,\"italic\":true,\"extra\":[{\"text\":\"text\",\"color\":\"green\"}]}", chat.serialize_str(47).unwrap());
 /// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
@@ -50,6 +53,8 @@ impl Chat {
     /// use mc_chat::{Chat, Component, TextComponent};
     ///
     /// let chat = Chat::component(TextComponent::new("Chat component"));
+    ///
+    /// assert_eq!("{\"text\":\"Chat component\"}", chat.serialize_str(47).unwrap());
     /// ```
     pub fn component<C>(kind: C) -> Self
     where
@@ -62,14 +67,46 @@ impl Chat {
         }
     }
 
+    /// Creates a new [`TextComponent`].
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::Chat;
+    ///
+    /// let chat = Chat::text("Literal text.");
+    ///
+    /// assert_eq!("{\"text\":\"Literal text.\"}", chat.serialize_str(47).unwrap());
+    /// ```
     pub fn text<T: Into<FrozenStr>>(text: T) -> Self {
         Chat::component(TextComponent::new(text))
     }
 
+    /// Creates a new [`TranslationComponent`].
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::Chat;
+    ///
+    /// // display name of a bow
+    /// let chat = Chat::key("item.bow.name");
+    ///
+    /// assert_eq!("{\"translate\":\"item.bow.name\"}", chat.serialize_str(47).unwrap());
+    /// ```
     pub fn key<T: Into<FrozenStr>>(key: T) -> Self {
         Chat::component(TranslationComponent::new(key))
     }
 
+    /// Creates a new [`ScoreComponent`].
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::Chat;
+    ///
+    /// // show the amount of stars the reader has gained
+    /// let chat = Chat::score("*", "stars_gained");
+    ///
+    /// assert_eq!("{\"score\":{\"name\":\"*\",\"objective\":\"stars_gained\"}}", chat.serialize_str(47).unwrap());
+    /// ```
     pub fn score<T, U>(name: T, objective: U) -> Self
     where
         T: Into<FrozenStr>,
@@ -78,14 +115,44 @@ impl Chat {
         Chat::component(ScoreComponent::new(name, objective))
     }
 
+    /// Creates a new [`SelectorComponent`].
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::Chat;
+    ///
+    /// let chat = Chat::selector("@e[type=Zombie,limit=1]", None);
+    ///
+    /// assert_eq!("{\"selector\":\"@e[type=Zombie,limit=1]\"}", chat.serialize_str(47).unwrap());
+    /// ```
     pub fn selector<T: Into<FrozenStr>>(selector: T, sep: Option<Chat>) -> Self {
         Chat::component(SelectorComponent::new(selector, sep))
     }
 
+    /// Creates a new [`KeybindComponent`].
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::Chat;
+    ///
+    /// let chat = Chat::keybind("key.inventory");
+    ///
+    /// assert_eq!("{\"keybind\":\"key.inventory\"}", chat.serialize_str(47).unwrap());
+    /// ```
     pub fn keybind<T: Into<FrozenStr>>(keybind: T) -> Self {
         Chat::component(KeybindComponent::new(keybind))
     }
 
+    /// Adds a child component to this chat component.
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::{Chat, ChatColor};
+    ///
+    /// let chat = Chat::text("The color of the child's ")
+    ///     .color(ChatColor::Green)
+    ///     .child(Chat::text(" text will also be green."));
+    /// ```
     pub fn child(mut self, child: Chat) -> Self {
         self.children.push(child);
         self
@@ -236,10 +303,11 @@ impl From<TranslationComponent> for Component {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(from = "serde_support::SerializeScore"))]
+#[cfg_attr(feature = "serde", serde(into = "serde_support::SerializeScore"))]
 pub struct ScoreComponent {
     pub name: FrozenStr,
     pub objective: FrozenStr,
-    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
     pub value: Option<FrozenStr>,
 }
 

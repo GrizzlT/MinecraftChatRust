@@ -11,6 +11,31 @@ use crate::style::Style;
 
 use super::Chat;
 
+#[derive(Serialize, Deserialize)]
+pub(crate) struct SerializeScore {
+    score: SerializeScoreInner,
+}
+
+impl From<ScoreComponent> for SerializeScore {
+    fn from(value: ScoreComponent) -> Self {
+        SerializeScore { score: SerializeScoreInner { name: value.name, objective: value.objective, value: value.value } }
+    }
+}
+
+impl From<SerializeScore> for ScoreComponent {
+    fn from(value: SerializeScore) -> Self {
+        ScoreComponent { name: value.score.name, objective: value.score.objective, value: value.score.value }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct SerializeScoreInner {
+    pub name: FrozenStr,
+    pub objective: FrozenStr,
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub value: Option<FrozenStr>,
+}
+
 #[derive(Deserialize)]
 pub(crate) struct FakeChatComponent {
     #[serde(flatten)]
