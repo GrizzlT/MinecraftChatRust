@@ -8,7 +8,24 @@ use uuid::Uuid;
 #[cfg(feature = "serde")]
 pub(crate) mod serde_support;
 
-/// The style of a [`Chat`]
+/// The style of a [`Chat`] component.
+///
+/// Style settings are all [`Option`]s to allow
+/// child components to reset the
+/// inherited style from their parent: a [`Some`]
+/// setting **overwrites** the parent's style.
+/// The settings are usually modified with the
+/// corresponding setters in [`Chat`].
+///
+/// # Example
+/// ```
+/// use mc_chat::{Style, TextColor};
+///
+/// let style = Style::new()
+///     .color(TextColor::Green)
+///     .bold(true)
+///     .obfuscated(true);
+/// ```
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct Style {
@@ -17,7 +34,7 @@ pub struct Style {
     pub underlined: Option<bool>,
     pub strikethrough: Option<bool>,
     pub obfuscated: Option<bool>,
-    pub color: Option<ChatColor>,
+    pub color: Option<TextColor>,
     /// This field is ignored for versions older than 1.8
     pub insertion: Option<FrozenStr>,
     /// This field is ignored for versions older than 1.16
@@ -29,17 +46,30 @@ pub struct Style {
 }
 
 impl Style {
+    /// Create a new style that inherits everything
+    /// from the parent component.
     pub fn new() -> Self {
         Style::default()
     }
 
-    pub fn and_color(&mut self, color: Option<ChatColor>) -> &mut Self {
-        self.color = color;
-        self
-    }
-
-    pub fn color(&mut self, color: ChatColor) -> &mut Self {
-        self.color = Some(color);
+    /// Change the text color.
+    ///
+    /// Because [`TextColor`] implements [`Into<Option<TextColor>>`],
+    /// it is very easy to either overwrite or inherit the parent's style.
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::{Style, TextColor};
+    ///
+    /// let mut style = Style::new();
+    /// // set a color
+    /// style.color(TextColor::Green);
+    ///
+    /// // make the style inherit the parent again
+    /// style.color(None);
+    /// ```
+    pub fn color<I: Into<Option<TextColor>>>(&mut self, color: I) -> &mut Self {
+        self.color = color.into();
         self
     }
 
@@ -89,10 +119,11 @@ impl Style {
     }
 }
 
-/// The different colors a [`Chat`] can have.
-/// ## TODO: Automatically find nearest value when serializing [`ChatColor::Custom`] for older versions
+/// The different colors a [`Chat`] component can have.
+/// ## TODO: Automatically find nearest value when serializing [`TextColor::Custom`] for older versions
+/// --> feature PR
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum ChatColor {
+pub enum TextColor {
     Black,
     DarkBlue,
     DarkGreen,
@@ -111,19 +142,19 @@ pub enum ChatColor {
     White,
     /// This field is ignored for versions older than 1.16.
     ///
-    /// See [`ChatColor::custom()`].
+    /// See [`TextColor::custom()`].
     Custom(FrozenStr),
     Reset,
 }
 
-impl ChatColor {
-    pub fn custom<T: Into<FrozenStr>>(color: T) -> ChatColor {
-        ChatColor::Custom(color.into())
+impl TextColor {
+    pub fn custom<T: Into<FrozenStr>>(color: T) -> TextColor {
+        TextColor::Custom(color.into())
     }
 }
 
 /// A ClickEvent useful in a chat message or book.
-/// TODO: Discuess feature gated `open_file` option
+/// TODO: Discuss feature gated `open_file` option
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "serde", serde(try_from = "serde_support::ClickEventData"))]

@@ -10,61 +10,61 @@ use serde::ser::{SerializeMap, SerializeStruct, self};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use uuid::Uuid;
 
-use crate::style::{ChatColor, ClickEvent, Style, HoverEvent};
+use crate::style::{TextColor, ClickEvent, Style, HoverEvent};
 
-impl Serialize for ChatColor {
+impl Serialize for TextColor {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
         serializer.serialize_str(match self {
-            ChatColor::Black => "black",
-            ChatColor::DarkBlue => "dark_blue",
-            ChatColor::DarkGreen => "dark_green",
-            ChatColor::DarkCyan => "dark_aqua",
-            ChatColor::DarkRed => "dark_red",
-            ChatColor::Purple => "dark_purple",
-            ChatColor::Gold => "gold",
-            ChatColor::Gray => "gray",
-            ChatColor::DarkGray => "dark_gray",
-            ChatColor::Blue => "blue",
-            ChatColor::Green => "green",
-            ChatColor::Cyan => "aqua",
-            ChatColor::Red => "red",
-            ChatColor::Pink => "light_purple",
-            ChatColor::Yellow => "yellow",
-            ChatColor::White => "white",
-            ChatColor::Custom(color) => color,
-            ChatColor::Reset => "reset",
+            TextColor::Black => "black",
+            TextColor::DarkBlue => "dark_blue",
+            TextColor::DarkGreen => "dark_green",
+            TextColor::DarkCyan => "dark_aqua",
+            TextColor::DarkRed => "dark_red",
+            TextColor::Purple => "dark_purple",
+            TextColor::Gold => "gold",
+            TextColor::Gray => "gray",
+            TextColor::DarkGray => "dark_gray",
+            TextColor::Blue => "blue",
+            TextColor::Green => "green",
+            TextColor::Cyan => "aqua",
+            TextColor::Red => "red",
+            TextColor::Pink => "light_purple",
+            TextColor::Yellow => "yellow",
+            TextColor::White => "white",
+            TextColor::Custom(color) => color,
+            TextColor::Reset => "reset",
         })
     }
 }
 
 // TODO: write unit tests
-impl<'de> Deserialize<'de> for ChatColor {
+impl<'de> Deserialize<'de> for TextColor {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
         let input = FrozenStr::deserialize(deserializer)?;
         Ok(match input.deref() {
-            "black" => ChatColor::Black,
-            "dark_blue" => ChatColor::DarkBlue,
-            "dark_green" => ChatColor::DarkGreen,
-            "dark_aqua" => ChatColor::DarkCyan,
-            "dark_red" => ChatColor::DarkRed,
-            "dark_purple" => ChatColor::Purple,
-            "gold" => ChatColor::Gold,
-            "gray" => ChatColor::Gray,
-            "dark_gray" => ChatColor::DarkGray,
-            "blue" => ChatColor::Blue,
-            "green" => ChatColor::Green,
-            "aqua" => ChatColor::Cyan,
-            "red" => ChatColor::Red,
-            "light_purple" => ChatColor::Pink,
-            "yellow" => ChatColor::Yellow,
-            "white" => ChatColor::White,
-            "reset" => ChatColor::Reset,
+            "black" => TextColor::Black,
+            "dark_blue" => TextColor::DarkBlue,
+            "dark_green" => TextColor::DarkGreen,
+            "dark_aqua" => TextColor::DarkCyan,
+            "dark_red" => TextColor::DarkRed,
+            "dark_purple" => TextColor::Purple,
+            "gold" => TextColor::Gold,
+            "gray" => TextColor::Gray,
+            "dark_gray" => TextColor::DarkGray,
+            "blue" => TextColor::Blue,
+            "green" => TextColor::Green,
+            "aqua" => TextColor::Cyan,
+            "red" => TextColor::Red,
+            "light_purple" => TextColor::Pink,
+            "yellow" => TextColor::Yellow,
+            "white" => TextColor::White,
+            "reset" => TextColor::Reset,
             custom => {
                 let error = serde::de::Error::invalid_value(Unexpected::Str(custom), &"a 6 digit hex color prefixed by '#'");
                 if custom.len() != 7 || !custom.starts_with('#') {
@@ -75,7 +75,7 @@ impl<'de> Deserialize<'de> for ChatColor {
                             return Err(error);
                         }
                     }
-                    ChatColor::custom(input)
+                    TextColor::custom(input)
                 }
             }
         })
@@ -325,7 +325,7 @@ impl<'a> Serialize for StyleVersioned<'a> {
             map.serialize_entry("obfuscated", &style.obfuscated)?;
         }
         if style.color.is_some() {
-            if let Some(ChatColor::Custom(_)) = style.color {
+            if let Some(TextColor::Custom(_)) = style.color {
                 if version >= 713 {
                     map.serialize_entry("color", &style.color)?;
                 }
