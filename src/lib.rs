@@ -7,7 +7,7 @@
 //! few rare cases (mainly the `storage` component),
 //! all serialization and deserialization should happen correctly.
 //!
-//! We plan on implementing legacy text soon!
+//! I plan on implementing legacy text soon!
 //!
 //! ### Contributing
 //!

@@ -1,26 +1,26 @@
-use crate::{style::Style, freeze::FrozenStr, ChatColor, HoverEvent, ClickEvent};
+use crate::{style::Style, freeze::FrozenStr, TextColor, HoverEvent, ClickEvent};
 
 #[cfg(feature = "serde")]
 pub(crate) mod serde_support;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// A Minecraft chat component.
+/// A Minecraft chat/text component.
 ///
-/// There are different [`Component`] kinds.
-/// Every chat component has a [`Style`]
-/// and an optional list of child chat components. The children
-/// of a chat component inherit the chat component's style.
+/// There are different [`ComponentKind`] kinds.
+/// Each text component has a [`Style`]
+/// and optional child text components. The children
+/// of a text component inherit the component's style.
 /// This inherited style can be overwritten.
 ///
 /// # Example
 /// ```
-/// use mc_chat::{Chat, ChatColor};
+/// use mc_chat::{Chat, TextColor};
 ///
 /// let chat = Chat::text("This is a bold and italic ")
 ///     .bold(true)
 ///     .italic(true)
-///     .child(Chat::text("text").color(ChatColor::Green));
+///     .child(Chat::text("text").color(TextColor::Green));
 ///
 /// assert_eq!("{\"text\":\"This is a bold and italic \",\"bold\":true,\"italic\":true,\"extra\":[{\"text\":\"text\",\"color\":\"green\"}]}", chat.serialize_str(47).unwrap());
 /// ```
@@ -31,9 +31,9 @@ use serde::{Deserialize, Serialize};
     serde(try_from = "serde_support::ChatComponentType")
 )]
 pub struct Chat {
-    /// The kind of chat.
+    /// The type of this component
     #[cfg_attr(feature = "serde", serde(flatten))]
-    pub kind: Component,
+    pub kind: ComponentKind,
     /// The style of this component.
     #[cfg_attr(feature = "serde", serde(flatten))]
     pub style: Style,
@@ -46,11 +46,11 @@ pub struct Chat {
 }
 
 impl Chat {
-    /// Creates a new chat component based on a give [`Component`].
+    /// Creates a new chat component based on a give [`ComponentKind`].
     ///
     /// # Example
     /// ```
-    /// use mc_chat::{Chat, Component, TextComponent};
+    /// use mc_chat::{Chat, ComponentKind, TextComponent};
     ///
     /// let chat = Chat::component(TextComponent::new("Chat component"));
     ///
@@ -58,7 +58,7 @@ impl Chat {
     /// ```
     pub fn component<C>(kind: C) -> Self
     where
-        C: Into<Component>,
+        C: Into<ComponentKind>,
     {
         Chat {
             kind: kind.into(),
@@ -147,10 +147,10 @@ impl Chat {
     ///
     /// # Example
     /// ```
-    /// use mc_chat::{Chat, ChatColor};
+    /// use mc_chat::{Chat, TextColor};
     ///
     /// let chat = Chat::text("The color of the child's ")
-    ///     .color(ChatColor::Green)
+    ///     .color(TextColor::Green)
     ///     .child(Chat::text(" text will also be green."));
     /// ```
     pub fn child(mut self, child: Chat) -> Self {
@@ -158,12 +158,7 @@ impl Chat {
         self
     }
 
-    pub fn and_color(mut self, color: Option<ChatColor>) -> Self {
-        self.style.and_color(color);
-        self
-    }
-
-    pub fn color(mut self, color: ChatColor) -> Self {
+    pub fn color(mut self, color: TextColor) -> Self {
         self.style.color(color);
         self
     }
@@ -220,7 +215,7 @@ impl Chat {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 #[cfg_attr(feature = "serde", serde(untagged))]
-pub enum Component {
+pub enum ComponentKind {
     Text(TextComponent),
     Translation(TranslationComponent),
     /// # Warning
@@ -262,7 +257,7 @@ impl TextComponent {
     }
 }
 
-impl From<TextComponent> for Component {
+impl From<TextComponent> for ComponentKind {
     fn from(value: TextComponent) -> Self {
         Self::Text(value)
     }
@@ -295,7 +290,7 @@ impl TranslationComponent {
     }
 }
 
-impl From<TranslationComponent> for Component {
+impl From<TranslationComponent> for ComponentKind {
     fn from(value: TranslationComponent) -> Self {
         Self::Translation(value)
     }
@@ -336,7 +331,7 @@ impl ScoreComponent {
     }
 }
 
-impl From<ScoreComponent> for Component {
+impl From<ScoreComponent> for ComponentKind {
     fn from(value: ScoreComponent) -> Self {
         Self::Score(value)
     }
@@ -368,7 +363,7 @@ impl SelectorComponent {
     }
 }
 
-impl From<SelectorComponent> for Component {
+impl From<SelectorComponent> for ComponentKind {
     fn from(value: SelectorComponent) -> Self {
         Self::Selector(value)
     }
@@ -393,7 +388,7 @@ impl KeybindComponent {
     }
 }
 
-impl From<KeybindComponent> for Component {
+impl From<KeybindComponent> for ComponentKind {
     fn from(value: KeybindComponent) -> Self {
         Self::Keybind(value)
     }

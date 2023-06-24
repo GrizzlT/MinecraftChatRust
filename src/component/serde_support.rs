@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 
-use crate::{Component, TextComponent, ScoreComponent, KeybindComponent};
+use crate::{ComponentKind, TextComponent, ScoreComponent, KeybindComponent};
 use crate::freeze::FrozenStr;
 use crate::style::serde_support::StyleVersioned;
 use serde::ser::SerializeSeq;
@@ -39,7 +39,7 @@ pub(crate) struct SerializeScoreInner {
 #[derive(Deserialize)]
 pub(crate) struct FakeChatComponent {
     #[serde(flatten)]
-    kind: Component,
+    kind: ComponentKind,
     #[serde(flatten)]
     style: Style,
     #[serde(rename = "extra", default)]
@@ -160,20 +160,20 @@ pub(crate) enum SerializeComponent<'a> {
     Keybind(&'a KeybindComponent),
 }
 
-impl<'a> From<(i32, &'a Component)> for SerializeComponent<'a> {
-    fn from((version, component): (i32, &'a Component)) -> Self {
+impl<'a> From<(i32, &'a ComponentKind)> for SerializeComponent<'a> {
+    fn from((version, component): (i32, &'a ComponentKind)) -> Self {
         match component {
-            Component::Text(v) => Self::Text(v),
-            Component::Translation(v) => Self::Translation(SerializeTranslation {
+            ComponentKind::Text(v) => Self::Text(v),
+            ComponentKind::Translation(v) => Self::Translation(SerializeTranslation {
                 key: &v.key,
                 with: (version, &v.with),
             }),
-            Component::Score(v) => Self::Score(v),
-            Component::Selector(v) => Self::Selector(SerializeSelector {
+            ComponentKind::Score(v) => Self::Score(v),
+            ComponentKind::Selector(v) => Self::Selector(SerializeSelector {
                 selector: &v.selector,
                 sep: (version, &v.sep),
             }),
-            Component::Keybind(v) => Self::Keybind(v),
+            ComponentKind::Keybind(v) => Self::Keybind(v),
         }
     }
 }
