@@ -1,5 +1,4 @@
 #[cfg(feature = "serde")]
-
 use crate::{component::Chat, freeze::FrozenStr};
 
 #[cfg(feature = "serde")]
@@ -208,11 +207,21 @@ pub enum HoverEvent {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct ItemStack {
     pub id: FrozenStr,
-    #[cfg_attr(feature = "serde", serde(rename = "Count", skip_serializing_if = "Option::is_none"))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(
+            rename = "Count",
+            skip_serializing_if = "Option::is_none",
+            default,
+            deserialize_with = "optional_serde::deserialize"
+        )
+    )]
     pub count: Option<i32>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "optional_serde::deserialize")
+    )]
     pub tag: Option<FrozenStr>,
 }
 
@@ -234,12 +243,21 @@ impl ItemStack {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct EntityTooltip {
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "optional_serde::deserialize")
+    )]
     pub name: Option<Box<Chat>>,
     #[cfg_attr(feature = "serde", serde(rename = "type"))]
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "optional_serde::deserialize")
+    )]
     pub kind: Option<FrozenStr>,
-    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
+    #[cfg_attr(
+        feature = "serde",
+        serde(default, deserialize_with = "optional_serde::deserialize")
+    )]
     pub id: Option<Uuid>,
 }
 
@@ -258,9 +276,11 @@ impl EntityTooltip {
 
 #[cfg(feature = "serde")]
 mod optional_serde {
-    use serde::{Deserializer, Deserialize};
+    use serde::{Deserialize, Deserializer};
 
-    pub fn deserialize<'de, D: Deserializer<'de>, T: Deserialize<'de>>(deserializer: D) -> Result<Option<T>, D::Error> {
+    pub fn deserialize<'de, D: Deserializer<'de>, T: Deserialize<'de>>(
+        deserializer: D,
+    ) -> Result<Option<T>, D::Error> {
         Ok(Some(T::deserialize(deserializer)?))
     }
 }
@@ -273,7 +293,10 @@ mod tests {
     fn test_itemstack() {
         let itemstack = ItemStack::new("minecraft:clay", Some(10), Some("{other:0}"));
         let str = fastsnbt::to_string(&itemstack).unwrap();
-        assert_eq!("{\"id\":\"minecraft:clay\",\"Count\":10,\"tag\":\"{other:0}\"}", &str);
+        assert_eq!(
+            "{\"id\":\"minecraft:clay\",\"Count\":10,\"tag\":\"{other:0}\"}",
+            &str
+        );
         let itemstack = ItemStack::new("minecraft:clay", None, Some("{other:2}"));
         let str = fastsnbt::to_string(&itemstack).unwrap();
         assert_eq!("{\"id\":\"minecraft:clay\",\"tag\":\"{other:2}\"}", &str);
