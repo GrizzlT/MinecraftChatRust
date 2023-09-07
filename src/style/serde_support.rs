@@ -8,6 +8,7 @@ use crate::freeze::FrozenStr;
 use serde::de::{Unexpected, Visitor, self};
 use serde::ser::{SerializeMap, SerializeStruct, self};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde_json::Value;
 use uuid::Uuid;
 
 use crate::style::{TextColor, ClickEvent, Style, HoverEvent};
@@ -240,7 +241,6 @@ impl<'a> Serialize for HoverEventSerialize<'a> {
     }
 }
 
-// TODO: add docs specifying that unordered HoverEvents are not supported yet
 impl<'de> Deserialize<'de> for HoverEvent {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -269,9 +269,34 @@ impl<'de> Deserialize<'de> for HoverEvent {
                         ("contents", "show_item") => Ok(HoverEvent::ShowItem(map.next_value()?)),
                         ("contents", "show_entity") => Ok(HoverEvent::ShowEntity(map.next_value()?)),
                         ("value", "show_text") => Ok(HoverEvent::ShowText(Box::new(map.next_value()?))),
-                        ("value", "show_item") => Ok(HoverEvent::ShowItem(fastsnbt::from_str(map.next_value()?)
+                        ("value", "show_item") => Ok(HoverEvent::ShowItem(fastsnbt::from_str(&map.next_value::<String>()?)
                             .map_err(|e| de::Error::custom(e.to_string()))?)),
-                        ("value", "show_entity") => Ok(HoverEvent::ShowEntity(fastsnbt::from_str(map.next_value()?)
+                        ("value", "show_entity") => Ok(HoverEvent::ShowEntity(fastsnbt::from_str(&map.next_value::<String>()?)
+                            .map_err(|e| de::Error::custom(e.to_string()))?)),
+                        ("contents", _ ) => Err(de::Error::invalid_value(Unexpected::Str(key), &"`show_text`, `show_item` or `show_entity`")),
+                        ("value", _ ) => Err(de::Error::invalid_value(Unexpected::Str(key), &"`show_text`, `show_item` or `show_entity`")),
+                        _ => Err(de::Error::invalid_value(Unexpected::Str(key), &"`contents`, `value`")),
+                    }
+                } else if key == "contents" || key == "value" {
+                    let content_value = map.next_value::<Value>()?;
+                    let _ = map.next_key::<&str>()?.ok_or(de::Error::missing_field("contents"))?;
+                    action = map.next_value()?;
+                    match (key, action) {
+                        ("contents", "show_text") => Ok(HoverEvent::ShowText(Box::new(
+                            serde_json::from_value(content_value).map_err(|_| de::Error::custom("Invalid text component"))?
+                        ))),
+                        ("contents", "show_item") => Ok(HoverEvent::ShowItem(
+                            serde_json::from_value(content_value).map_err(|_| de::Error::custom("Invalid itemstack"))?
+                        )),
+                        ("contents", "show_entity") => Ok(HoverEvent::ShowEntity(
+                            serde_json::from_value(content_value).map_err(|_| de::Error::custom("Invalid entity"))?
+                        )),
+                        ("value", "show_text") => Ok(HoverEvent::ShowText(Box::new(
+                            serde_json::from_value(content_value).map_err(|e| de::Error::custom(format!("Invalid text component: {}", e)))?
+                        ))),
+                        ("value", "show_item") => Ok(HoverEvent::ShowItem(fastsnbt::from_str(content_value.as_str().ok_or(de::Error::custom("Expected itemstack sNBT"))?)
+                            .map_err(|e| de::Error::custom(e.to_string()))?)),
+                        ("value", "show_entity") => Ok(HoverEvent::ShowEntity(fastsnbt::from_str(content_value.as_str().ok_or(de::Error::custom("Expected entity sNBT"))?)
                             .map_err(|e| de::Error::custom(e.to_string()))?)),
                         ("contents", _ ) => Err(de::Error::invalid_value(Unexpected::Str(key), &"`show_text`, `show_item` or `show_entity`")),
                         ("value", _ ) => Err(de::Error::invalid_value(Unexpected::Str(key), &"`show_text`, `show_item` or `show_entity`")),
@@ -355,5 +380,77 @@ impl<'a> Serialize for StyleVersioned<'a> {
         }
 
         map.end()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    mod hover_event {
+        use crate::{HoverEvent, Chat, VERSION_1_8, VERSION_1_16, ItemStack, EntityTooltip};
+
+        use super::super::HoverEventSerialize;
+
+        #[test]
+        pub fn serialize_text() {
+            let event = HoverEvent::ShowText(Box::new(Chat::text("Sample text")));
+            let serialized_str_pre = serde_json::to_string(&HoverEventSerialize::from((VERSION_1_8, &event))).unwrap();
+            assert_eq!(r#"{"action":"show_text","value":{"text":"Sample text"}}"#, serialized_str_pre);
+            let serialized_str_post = serde_json::to_string(&HoverEventSerialize::from((VERSION_1_16, &event))).unwrap();
+            assert_eq!(r#"{"action":"show_text","contents":{"text":"Sample text"}}"#, serialized_str_post);
+        }
+
+        #[test]
+        pub fn serialize_itemstack() {
+            let event = HoverEvent::ShowItem(ItemStack::new("diamond", None, Option::<&str>::None));
+            let serialized_str_pre = serde_json::to_string(&HoverEventSerialize::from((VERSION_1_8, &event))).unwrap();
+            assert_eq!(r#"{"action":"show_item","value":"{\"id\":\"diamond\"}"}"#, serialized_str_pre);
+            let serialized_str_post = serde_json::to_string(&HoverEventSerialize::from((VERSION_1_16, &event))).unwrap();
+            assert_eq!(r#"{"action":"show_item","contents":{"id":"diamond"}}"#, serialized_str_post);
+        }
+
+        #[test]
+        pub fn serialize_entity() {
+            let event = HoverEvent::ShowEntity(EntityTooltip::new(Some(Chat::text("Sample name")), Some("minecraft:pig"), None));
+            let serialized_str_pre = serde_json::to_string(&HoverEventSerialize::from((VERSION_1_8, &event))).unwrap();
+            assert_eq!(r#"{"action":"show_entity","value":"{\"name\":{\"text\":\"Sample name\"},\"type\":\"minecraft:pig\"}"}"#, serialized_str_pre);
+            let serialized_str_post = serde_json::to_string(&HoverEventSerialize::from((VERSION_1_16, &event))).unwrap();
+            assert_eq!(r#"{"action":"show_entity","contents":{"name":{"text":"Sample name"},"type":"minecraft:pig"}}"#, serialized_str_post);
+        }
+
+        #[test]
+        pub fn deserialize_text() {
+            let event_orig = HoverEvent::ShowText(Box::new(Chat::text("Sample text")));
+
+            let serialized_str_pre = r#"{"value":{"text":"Sample text"},"action":"show_text"}"#;
+            let serialized_str_post = r#"{"contents":{"text":"Sample text"},"action":"show_text"}"#;
+            let event = serde_json::from_str(&serialized_str_pre).unwrap();
+            assert_eq!(event_orig, event);
+            let event = serde_json::from_str(&serialized_str_post).unwrap();
+            assert_eq!(event_orig, event);
+        }
+
+        #[test]
+        pub fn deserialize_item() {
+            let event_orig = HoverEvent::ShowItem(ItemStack::new("diamond", Some(30), Option::<&str>::None));
+
+            let serialized_str_pre = r#"{"value":"{\"id\":\"diamond\",\"Count\":30}","action":"show_item"}"#;
+            let serialized_str_post = r#"{"contents":{"id":"diamond","Count":30},"action":"show_item"}"#;
+            let event = serde_json::from_str(&serialized_str_pre).unwrap();
+            assert_eq!(event_orig, event);
+            let event = serde_json::from_str(&serialized_str_post).unwrap();
+            assert_eq!(event_orig, event);
+        }
+
+        #[test]
+        pub fn deserialize_entity() {
+            let event_orig = HoverEvent::ShowEntity(EntityTooltip::new(Some(Chat::text("Sample name")), Some("minecraft:pig"), None));
+
+            let serialized_str_pre = r#"{"action":"show_entity","value":"{\"name\":{\"text\":\"Sample name\"},\"type\":\"minecraft:pig\"}"}"#;
+            let serialized_str_post = r#"{"action":"show_entity","contents":{"name":{"text":"Sample name"},"type":"minecraft:pig"}}"#;
+            let event = serde_json::from_str(&serialized_str_pre).unwrap();
+            assert_eq!(event_orig, event);
+            let event = serde_json::from_str(&serialized_str_post).unwrap();
+            assert_eq!(event_orig, event);
+        }
     }
 }

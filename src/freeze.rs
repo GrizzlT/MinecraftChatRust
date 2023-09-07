@@ -1,7 +1,23 @@
+//! In Minecraft's chat data type, strings get nested a lot. Chat gets
+//! used a lot, so this needs to be optimized. There are two main options for
+//! efficient, immutable strings: [`Arc<str>`] and [`Box<str>`].
+//!
+//! In a typical server's perspective, there are the following scenarios:
+//! - A player sends a message to the server -> the server broadcasts this message.
+//! - The server sends a message to all players (usually more [`Style`](crate::Style) applied).
+//!
+//! For an optimized server, this will be done asynchronously. This means it
+//! is more worthwhile to choose [`Arc<str>`] over [`Box<str>`] since it requires
+//! less data copies. This is how [`FrozenStr`] is implemented: it's a simple
+//! wrapper around [`Arc<str>`].
+//!
+
 use std::{sync::Arc, ops::Deref, fmt::Display};
 
-use serde::{Serialize, Deserialize};
+use serde::{Serialize, Deserialize, de::Visitor};
 
+/// Efficient immutable string.
+///
 /// See the [module](self)'s documentation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FrozenStr {
@@ -49,8 +65,35 @@ impl<'de> Deserialize<'de> for FrozenStr {
     where
         D: serde::Deserializer<'de>
     {
-        let str = <&str>::deserialize(deserializer)?;
-        Ok(str.into())
+        struct StrVisitor;
+
+        impl<'de> Visitor<'de> for StrVisitor {
+            type Value = FrozenStr;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("A string")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error, {
+                Ok(v.into())
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error, {
+                Ok(v.into())
+            }
+
+            fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error, {
+                Ok(v.into())
+            }
+        }
+
+        deserializer.deserialize_string(StrVisitor)
     }
 }
 

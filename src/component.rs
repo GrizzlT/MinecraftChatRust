@@ -13,6 +13,8 @@ use serde::{Deserialize, Serialize};
 /// of a text component inherit the component's style.
 /// This inherited style can be overwritten.
 ///
+/// To access properties of a chat component, simply access its field.
+///
 /// # Example
 /// ```
 /// use mc_chat::{Chat, TextColor};
@@ -46,7 +48,7 @@ pub struct Chat {
 }
 
 impl Chat {
-    /// Creates a new chat component based on a give [`ComponentKind`].
+    /// Creates a new chat component based on a given [`ComponentKind`].
     ///
     /// # Example
     /// ```
@@ -158,51 +160,61 @@ impl Chat {
         self
     }
 
+    /// See [`Style`].
     pub fn color(mut self, color: TextColor) -> Self {
         self.style.color(color);
         self
     }
 
+    /// See [`Style`].
     pub fn bold(mut self, bold: bool) -> Self {
         self.style.bold(bold);
         self
     }
 
+    /// See [`Style`].
     pub fn italic(mut self, italic: bool) -> Self {
         self.style.italic(italic);
         self
     }
 
+    /// See [`Style`].
     pub fn underlined(mut self, underlined: bool) -> Self {
         self.style.underlined(underlined);
         self
     }
 
+    /// See [`Style`].
     pub fn strikethrough(mut self, strikethrough: bool) -> Self {
         self.style.strikethrough(strikethrough);
         self
     }
 
+    /// See [`Style`].
     pub fn obfuscated(mut self, obfuscated: bool) -> Self {
         self.style.obfuscated(obfuscated);
         self
     }
 
+    /// See [`Style`].
     pub fn font<T: Into<FrozenStr>>(mut self, font: Option<T>) -> Self {
         self.style.font(font);
         self
     }
 
+    /// See [`Style`].
     pub fn insertion<T: Into<FrozenStr>>(mut self, insertion: Option<T>) -> Self {
         self.style.insertion(insertion);
         self
     }
 
+    /// See [`Style`].
     pub fn click(mut self, click_event: Option<ClickEvent>) -> Self {
         self.style.click(click_event);
         self
     }
 
+    /// See [`Style`].
     pub fn hover(mut self, hover_event: Option<HoverEvent>) -> Self {
         self.style.hover(hover_event);
         self
@@ -240,6 +252,7 @@ pub enum ComponentKind {
     // TODO: research the `nbt` values
 }
 
+/// Simple plain text.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct TextComponent {
@@ -247,10 +260,25 @@ pub struct TextComponent {
 }
 
 impl TextComponent {
+    /// Create a new text component.
+    /// # Example
+    /// ```
+    /// use mc_chat::TextComponent;
+    ///
+    /// let component = TextComponent::new("Example text");
+    /// ```
     pub fn new<T: Into<FrozenStr>>(text: T) -> Self {
         TextComponent { text: text.into() }
     }
 
+    /// Change the text of this component.
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::TextComponent;
+    ///
+    /// let component = TextComponent::new("Old Text").text("New Text");
+    /// ```
     pub fn text<T: Into<FrozenStr>>(mut self, text: T) -> Self {
         self.text = text.into();
         self
@@ -263,6 +291,17 @@ impl From<TextComponent> for ComponentKind {
     }
 }
 
+/// Substitutions based on the selected language.
+///
+/// A key should be provided that can have possible
+/// chat component as substitutions within.
+///
+/// # Example
+/// ```
+/// use mc_chat::TranslationComponent;
+/// // gets substituted with the name of a bow
+/// let chat = TranslationComponent::new("item.bow.name");
+/// ```
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct TranslationComponent {
@@ -296,6 +335,7 @@ impl From<TranslationComponent> for ComponentKind {
     }
 }
 
+/// Scoreboard substitution component.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "serde", serde(from = "serde_support::SerializeScore"))]
@@ -337,6 +377,7 @@ impl From<ScoreComponent> for ComponentKind {
     }
 }
 
+/// Substitution based on entity selection.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct SelectorComponent {
@@ -369,6 +410,7 @@ impl From<SelectorComponent> for ComponentKind {
     }
 }
 
+/// Substitution by a keybind.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct KeybindComponent {

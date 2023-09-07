@@ -36,7 +36,7 @@ pub(crate) struct SerializeScoreInner {
     pub value: Option<FrozenStr>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub(crate) struct FakeChatComponent {
     #[serde(flatten)]
     kind: ComponentKind,
@@ -57,7 +57,7 @@ impl From<FakeChatComponent> for Chat {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub(crate) enum ChatComponentType {
     Primitive(String),
@@ -100,6 +100,24 @@ impl TryFrom<ChatComponentType> for Chat {
 }
 
 impl Chat {
+    /// Serialize this chat component to a JSON string.
+    ///
+    /// Serialization happens using [`serde_json`]. Newer style elements
+    /// are automatically excluded if the provided version doesn't support
+    /// these. When using a version that's 1.16 or above, [`HoverEvent`](crate::HoverEvent)
+    /// uses a different data structure.
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::{Chat, VERSION_1_8, VERSION_1_16};
+    ///
+    /// let chat = Chat::text("Sample text").font(Some("example_font"));
+    /// let serialized_old = chat.serialize_str(VERSION_1_8).unwrap();
+    /// assert_eq!(r#"{"text":"Sample text"}"#, serialized_old);
+    ///
+    /// let serialized_new = chat.serialize_str(VERSION_1_16).unwrap();
+    /// assert_eq!(r#"{"text":"Sample text","font":"example_font"}"#, serialized_new);
+    /// ```
     pub fn serialize_str(&self, version: i32) -> serde_json::Result<String> {
         serde_json::to_string(&SerializeChat {
             kind: (version, &self.kind).into(),
@@ -108,6 +126,26 @@ impl Chat {
         })
     }
 
+    /// Serialize this chat component to JSON bytes.
+    ///
+    /// Serialization happens using [`serde_json`]. Newer style elements
+    /// are automatically excluded if the provided version doesn't support
+    /// these. When using a version that's 1.16 or above, [`HoverEvent`](crate::HoverEvent)
+    /// uses a different data structure.
+    ///
+    /// # Example
+    /// ```
+    /// use mc_chat::{Chat, VERSION_1_8, VERSION_1_16};
+    ///
+    /// let chat = Chat::text("Sample text").font(Some("example_font"));
+    /// let serialized_old = chat.serialize_vec(VERSION_1_8).unwrap();
+    /// assert_eq!(&[123, 34, 116, 101, 120, 116, 34, 58, 34, 83, 97, 109, 112, 108, 101, 32, 116, 101, 120, 116, 34, 125], &serialized_old[..]);
+    ///
+    /// let serialized_new = chat.serialize_vec(VERSION_1_16).unwrap();
+    /// assert_eq!(&[123, 34, 116, 101, 120, 116, 34, 58, 34, 83, 97, 109, 112, 108, 101, 32, 116,
+    /// 101, 120, 116, 34, 44, 34, 102, 111, 110, 116, 34, 58, 34, 101, 120, 97, 109, 112, 108,
+    /// 101, 95, 102, 111, 110, 116, 34, 125], &serialized_new[..]);
+    /// ```
     pub fn serialize_vec(&self, version: i32) -> serde_json::Result<Vec<u8>> {
         serde_json::to_vec(&SerializeChat {
             kind: (version, &self.kind).into(),
@@ -203,4 +241,46 @@ fn serialize_children<S: Serializer>((version, children): &(i32, &Vec<Chat>), se
 
 fn children_is_empty((_, children): &(i32, &Vec<Chat>)) -> bool {
     children.is_empty()
+}
+
+#[cfg(test)]
+mod tests {
+    use serde_json::Value;
+
+    use crate::VERSION_1_8;
+
+    use super::*;
+
+    #[test]
+    pub fn serialize_chat_text() {
+        let chat = Chat::text("Sample text");
+        let serialized = chat.serialize_str(VERSION_1_8).unwrap();
+        assert_eq!(r#"{"text":"Sample text"}"#, serialized);
+    }
+
+    #[test]
+    pub fn deserialize_primitive() {
+        let chat_orig = Chat::text("Sample text");
+
+        let primitive = r#""Sample text""#;
+        let chat: Chat = serde_json::from_str(primitive).unwrap();
+        assert_eq!(chat_orig, chat);
+
+        let value: Value = serde_json::from_str(primitive).unwrap();
+        let chat: Chat = serde_json::from_value(value).unwrap();
+        assert_eq!(chat_orig, chat);
+    }
+
+    #[test]
+    pub fn deserialize_object() {
+        let chat_orig = Chat::text("Sample text");
+
+        let object = r#"{"text":"Sample text"}"#;
+        let chat: Chat = serde_json::from_str(object).unwrap();
+        assert_eq!(chat_orig, chat);
+
+        let value: Value = serde_json::from_str(object).unwrap();
+        let chat: Chat = serde_json::from_value(value).unwrap();
+        assert_eq!(chat_orig, chat);
+    }
 }
