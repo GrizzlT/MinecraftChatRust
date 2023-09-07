@@ -1,4 +1,4 @@
-use crate::{style::Style, freeze::FrozenStr, TextColor, HoverEvent, ClickEvent};
+use crate::{freeze::FrozenStr, style::Style, ClickEvent, HoverEvent, TextColor};
 
 #[cfg(feature = "serde")]
 pub(crate) mod serde_support;

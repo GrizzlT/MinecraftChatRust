@@ -12,9 +12,9 @@
 //! wrapper around [`Arc<str>`].
 //!
 
-use std::{sync::Arc, ops::Deref, fmt::Display};
+use std::{fmt::Display, ops::Deref, sync::Arc};
 
-use serde::{Serialize, Deserialize, de::Visitor};
+use serde::{de::Visitor, Deserialize, Serialize};
 
 /// Efficient immutable string.
 ///
@@ -35,9 +35,7 @@ where
     T: Into<Arc<str>>,
 {
     fn from(str: T) -> Self {
-        Self {
-            str: str.into()
-        }
+        Self { str: str.into() }
     }
 }
 
@@ -53,7 +51,7 @@ impl Deref for FrozenStr {
 impl Serialize for FrozenStr {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: serde::Serializer
+        S: serde::Serializer,
     {
         self.deref().serialize(serializer)
     }
@@ -63,7 +61,7 @@ impl Serialize for FrozenStr {
 impl<'de> Deserialize<'de> for FrozenStr {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>
+        D: serde::Deserializer<'de>,
     {
         struct StrVisitor;
 
@@ -75,20 +73,23 @@ impl<'de> Deserialize<'de> for FrozenStr {
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-                where
-                    E: serde::de::Error, {
+            where
+                E: serde::de::Error,
+            {
                 Ok(v.into())
             }
 
             fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-                where
-                    E: serde::de::Error, {
+            where
+                E: serde::de::Error,
+            {
                 Ok(v.into())
             }
 
             fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
-                where
-                    E: serde::de::Error, {
+            where
+                E: serde::de::Error,
+            {
                 Ok(v.into())
             }
         }
@@ -106,8 +107,6 @@ mod tests {
     #[test]
     fn test_serde() {
         let str: FrozenStr = "Hello world".into();
-        assert_tokens(&str, &[
-            Token::BorrowedStr("Hello world"),
-        ]);
+        assert_tokens(&str, &[Token::BorrowedStr("Hello world")]);
     }
 }

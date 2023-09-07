@@ -15,8 +15,8 @@
 //! feel free to contribute.
 
 mod component;
-mod style;
 pub mod freeze;
+mod style;
 
 mod tests;
 

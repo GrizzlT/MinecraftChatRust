@@ -1,9 +1,9 @@
 use std::convert::TryFrom;
 use std::fmt::{Display, Formatter};
 
-use crate::{ComponentKind, TextComponent, ScoreComponent, KeybindComponent};
 use crate::freeze::FrozenStr;
 use crate::style::serde_support::StyleVersioned;
+use crate::{ComponentKind, KeybindComponent, ScoreComponent, TextComponent};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize, Serializer};
 
@@ -18,13 +18,23 @@ pub(crate) struct SerializeScore {
 
 impl From<ScoreComponent> for SerializeScore {
     fn from(value: ScoreComponent) -> Self {
-        SerializeScore { score: SerializeScoreInner { name: value.name, objective: value.objective, value: value.value } }
+        SerializeScore {
+            score: SerializeScoreInner {
+                name: value.name,
+                objective: value.objective,
+                value: value.value,
+            },
+        }
     }
 }
 
 impl From<SerializeScore> for ScoreComponent {
     fn from(value: SerializeScore) -> Self {
-        ScoreComponent { name: value.score.name, objective: value.score.objective, value: value.score.value }
+        ScoreComponent {
+            name: value.score.name,
+            objective: value.score.objective,
+            value: value.score.value,
+        }
     }
 }
 
@@ -80,9 +90,7 @@ impl TryFrom<ChatComponentType> for Chat {
 
     fn try_from(value: ChatComponentType) -> Result<Self, Self::Error> {
         match value {
-            ChatComponentType::Primitive(text) => {
-                Ok(Chat::text(text))
-            }
+            ChatComponentType::Primitive(text) => Ok(Chat::text(text)),
             ChatComponentType::Array(array) => {
                 let mut iterator = array.into_iter();
                 let mut first = match iterator.next() {
@@ -177,13 +185,17 @@ pub(crate) fn version_option_none((_, value): &(i32, &Option<Box<Chat>>)) -> boo
     value.is_none()
 }
 
-pub(crate) fn serialize_chat_option<S: Serializer>((version, chat): &(i32, &Option<Box<Chat>>), serializer: S) -> Result<S::Ok, S::Error> {
+pub(crate) fn serialize_chat_option<S: Serializer>(
+    (version, chat): &(i32, &Option<Box<Chat>>),
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
     match chat {
         Some(c) => SerializeChat {
             kind: (*version, &c.kind).into(),
             style: (*version, &c.style).into(),
             children: (*version, &c.children),
-        }.serialize(serializer),
+        }
+        .serialize(serializer),
         None => serializer.serialize_none(),
     }
 }
@@ -227,7 +239,10 @@ pub(crate) struct SerializeChat<'a> {
     pub children: (i32, &'a Vec<Chat>),
 }
 
-fn serialize_children<S: Serializer>((version, children): &(i32, &Vec<Chat>), serializer: S) -> Result<S::Ok, S::Error> {
+fn serialize_children<S: Serializer>(
+    (version, children): &(i32, &Vec<Chat>),
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
     let mut serializer = serializer.serialize_seq(Some(children.len()))?;
     for child in *children {
         serializer.serialize_element(&SerializeChat {
