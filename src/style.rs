@@ -120,6 +120,7 @@ impl Style {
 }
 
 /// The different colors a [`Chat`] component can have.
+///
 /// ## TODO: Automatically find nearest value when serializing [`TextColor::Custom`] for older versions
 /// --> feature PR
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -190,6 +191,11 @@ impl ClickEvent {
 }
 
 /// A HoverEvent useful in a chat message or book.
+///
+/// # Performance
+/// It is highly recommended to provide the data for deserialization
+/// with the action first and then the value/contents (based on the version).
+/// **Doing otherwise will result in an extra allocation.**
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum HoverEvent {
     ShowText(Box<Chat>),
@@ -197,13 +203,16 @@ pub enum HoverEvent {
     ShowEntity(EntityTooltip),
 }
 
+/// Chat data from an itemstack.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct ItemStack {
     pub id: FrozenStr,
     #[cfg_attr(feature = "serde", serde(rename = "Count", skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
     pub count: Option<i32>,
     #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
     pub tag: Option<FrozenStr>,
 }
 
@@ -221,12 +230,16 @@ impl ItemStack {
     }
 }
 
+/// Entity tooltip.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(Deserialize))]
 pub struct EntityTooltip {
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
     pub name: Option<Box<Chat>>,
     #[cfg_attr(feature = "serde", serde(rename = "type"))]
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
     pub kind: Option<FrozenStr>,
+    #[cfg_attr(feature = "serde", serde(default, deserialize_with = "optional_serde::deserialize"))]
     pub id: Option<Uuid>,
 }
 
@@ -240,6 +253,15 @@ impl EntityTooltip {
             kind: kind.map(|k| k.into()),
             id,
         }
+    }
+}
+
+#[cfg(feature = "serde")]
+mod optional_serde {
+    use serde::{Deserializer, Deserialize};
+
+    pub fn deserialize<'de, D: Deserializer<'de>, T: Deserialize<'de>>(deserializer: D) -> Result<Option<T>, D::Error> {
+        Ok(Some(T::deserialize(deserializer)?))
     }
 }
 
