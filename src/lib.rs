@@ -31,3 +31,13 @@ pub const VERSION_1_8: i32 = 47;
 pub const VERSION_1_15: i32 = 573;
 /// The version number of the Minecraft protocol for 1.16
 pub const VERSION_1_16: i32 = 735;
+
+#[macro_export]
+macro_rules! chat {
+    ($del:expr => $($tt:tt)*) => {
+        ::mc_chat_proc::chat!($del, $($tt)*)
+    };
+    ($($tt:tt)*) => {
+        ::mc_chat_proc::chat!("§", $($tt)*)
+    };
+}

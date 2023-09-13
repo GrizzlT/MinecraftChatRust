@@ -90,11 +90,11 @@ impl Chat {
     /// use mc_chat::Chat;
     ///
     /// // display name of a bow
-    /// let chat = Chat::key("item.bow.name");
+    /// let chat = Chat::translate("item.bow.name");
     ///
     /// assert_eq!("{\"translate\":\"item.bow.name\"}", chat.serialize_str(47).unwrap());
     /// ```
-    pub fn key<T: Into<FrozenStr>>(key: T) -> Self {
+    pub fn translate<T: Into<FrozenStr>>(key: T) -> Self {
         Chat::component(TranslationComponent::new(key))
     }
 

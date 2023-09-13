@@ -22,6 +22,7 @@
             rust-bin.stable.latest.default
             rust-analyzer
             graphviz
+            cargo-expand
           ];
         };
       });
