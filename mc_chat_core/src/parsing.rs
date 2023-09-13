@@ -37,57 +37,47 @@ pub fn map_to_tree(legacy_chat: LegacyChat) -> syn::Result<ExpandedChatPart> {
 
                         if "0123456789abcdef".contains(code) {
                             if current_parent.is_placeholder() {
-                                if rest != "" {
+                                if !rest.is_empty() {
                                     let mut node = ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
                                     node.color = Some(color_from_code(part.span(), code)?);
                                     current_parent.children.push(node);
                                 }
-                            } else {
-                                if rest != "" {
-                                    let mut node = ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
-                                    node.color = Some(color_from_code(part.span(), code)?);
-                                    // reverse for correct left to right order
-                                    current_parent.children.reverse();
-                                    node.children.push(current_parent);
-                                    current_parent = ExpandedChatPart::default();
-                                    current_parent.children.push(node);
-                                } else {
-                                    if current_parent.color.is_none() {
-                                        current_parent.color = Some(color_from_code(part.span(), code)?);
-                                    }
-                                }
-                            }
-                        } else {
-                            if code == 'r' {
-                                if current_parent.is_placeholder() {
-                                    root.children.extend(current_parent.children);
-                                } else {
-                                    current_parent.children.reverse();
-                                    root.children.push(current_parent);
-                                }
+                            } else if !rest.is_empty() {
+                                let mut node = ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
+                                node.color = Some(color_from_code(part.span(), code)?);
+                                // reverse for correct left to right order
+                                current_parent.children.reverse();
+                                node.children.push(current_parent);
                                 current_parent = ExpandedChatPart::default();
-                                if rest != "" {
-                                    root.children.push(ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest))));
-                                }
+                                current_parent.children.push(node);
+                            } else if current_parent.color.is_none() {
+                                current_parent.color = Some(color_from_code(part.span(), code)?);
+                            }
+                        } else if code == 'r' {
+                            if current_parent.is_placeholder() {
+                                root.children.extend(current_parent.children);
                             } else {
-                                if rest != "" {
-                                    let mut node = ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
-                                    node.extra_style.insert(code);
-                                    if current_parent.is_placeholder() {
-                                        node.children.extend(current_parent.children);
-                                    } else {
-                                        current_parent.children.reverse();
-                                        node.children.push(current_parent);
-                                    }
-                                    current_parent = node;
-                                } else {
-                                    if !current_parent.is_placeholder() || !current_parent.children.is_empty() {
-                                        current_parent.extra_style.insert(code);
-                                        if current_parent.tokens.is_none() {
-                                            current_parent.tokens = Some(quote!(::mc_chat::Chat::text("")));
-                                        }
-                                    }
-                                }
+                                current_parent.children.reverse();
+                                root.children.push(current_parent);
+                            }
+                            current_parent = ExpandedChatPart::default();
+                            if !rest.is_empty() {
+                                root.children.push(ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest))));
+                            }
+                        } else if !rest.is_empty() {
+                            let mut node = ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
+                            node.extra_style.insert(code);
+                            if current_parent.is_placeholder() {
+                                node.children.extend(current_parent.children);
+                            } else {
+                                current_parent.children.reverse();
+                                node.children.push(current_parent);
+                            }
+                            current_parent = node;
+                        } else if !current_parent.is_placeholder() || !current_parent.children.is_empty() {
+                            current_parent.extra_style.insert(code);
+                            if current_parent.tokens.is_none() {
+                                current_parent.tokens = Some(quote!(::mc_chat::Chat::text("")));
                             }
                         }
                     }
