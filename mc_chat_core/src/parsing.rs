@@ -1,10 +1,10 @@
-use std::fmt::Debug;
 use std::collections::HashSet;
+use std::fmt::Debug;
 
-use proc_macro2::{TokenStream, Span};
+use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::{quote, ToTokens};
-use syn::{parse::Parse, LitStr, Token, Expr, punctuated::Punctuated, ExprPath, parse_quote};
+use syn::{parse::Parse, parse_quote, punctuated::Punctuated, Expr, ExprPath, LitStr, Token};
 
 pub fn map_to_tree(legacy_chat: LegacyChat) -> syn::Result<ExpandedChatPart> {
     // Root Chat component
@@ -17,7 +17,10 @@ pub fn map_to_tree(legacy_chat: LegacyChat) -> syn::Result<ExpandedChatPart> {
                 let pattern = legacy_chat.pattern.value();
                 let value = part.value();
                 let mut piece_iter = value.rsplit(&pattern);
-                let mut piece = piece_iter.next().ok_or(syn::Error::new(part.span(), "Empty string should be able to be rsplit-ted"))?;
+                let mut piece = piece_iter.next().ok_or(syn::Error::new(
+                    part.span(),
+                    "Empty string should be able to be rsplit-ted",
+                ))?;
                 let mut next_piece = piece_iter.next();
                 loop {
                     if piece.is_empty() {
@@ -25,7 +28,9 @@ pub fn map_to_tree(legacy_chat: LegacyChat) -> syn::Result<ExpandedChatPart> {
                             abort!(part.span(), "Invalid escape sequence detected!");
                         }
                     } else if next_piece.is_none() {
-                        current_parent.children.push(ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#piece))))
+                        current_parent
+                            .children
+                            .push(ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#piece))))
                     } else {
                         let mut chars = piece.chars();
                         let code = chars.next();
@@ -38,12 +43,14 @@ pub fn map_to_tree(legacy_chat: LegacyChat) -> syn::Result<ExpandedChatPart> {
                         if "0123456789abcdef".contains(code) {
                             if current_parent.is_placeholder() {
                                 if !rest.is_empty() {
-                                    let mut node = ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
+                                    let mut node =
+                                        ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
                                     node.color = Some(color_from_code(part.span(), code)?);
                                     current_parent.children.push(node);
                                 }
                             } else if !rest.is_empty() {
-                                let mut node = ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
+                                let mut node =
+                                    ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
                                 node.color = Some(color_from_code(part.span(), code)?);
                                 // reverse for correct left to right order
                                 current_parent.children.reverse();
@@ -62,10 +69,13 @@ pub fn map_to_tree(legacy_chat: LegacyChat) -> syn::Result<ExpandedChatPart> {
                             }
                             current_parent = ExpandedChatPart::default();
                             if !rest.is_empty() {
-                                root.children.push(ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest))));
+                                root.children.push(ExpandedChatPart::new(
+                                    quote!(::mc_chat::Chat::text(#rest)),
+                                ));
                             }
                         } else if !rest.is_empty() {
-                            let mut node = ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
+                            let mut node =
+                                ExpandedChatPart::new(quote!(::mc_chat::Chat::text(#rest)));
                             node.extra_style.insert(code);
                             if current_parent.is_placeholder() {
                                 node.children.extend(current_parent.children);
@@ -74,7 +84,9 @@ pub fn map_to_tree(legacy_chat: LegacyChat) -> syn::Result<ExpandedChatPart> {
                                 node.children.push(current_parent);
                             }
                             current_parent = node;
-                        } else if !current_parent.is_placeholder() || !current_parent.children.is_empty() {
+                        } else if !current_parent.is_placeholder()
+                            || !current_parent.children.is_empty()
+                        {
                             current_parent.extra_style.insert(code);
                             if current_parent.tokens.is_none() {
                                 current_parent.tokens = Some(quote!(::mc_chat::Chat::text("")));
@@ -168,7 +180,10 @@ impl Debug for ExpandedChatPart {
 
 impl ToTokens for ExpandedChatPart {
     fn to_tokens(&self, token_stream: &mut TokenStream) {
-        let mut tokens: TokenStream = self.tokens.clone().unwrap_or(quote!(::mc_chat::Chat::text("")));
+        let mut tokens: TokenStream = self
+            .tokens
+            .clone()
+            .unwrap_or(quote!(::mc_chat::Chat::text("")));
         if let Some(ref color) = self.color {
             tokens = quote!(#tokens.color(#color));
         }
@@ -192,7 +207,7 @@ impl ToTokens for ExpandedChatPart {
 pub struct LegacyChat {
     pub pattern: LitStr,
     pub comma: Token![,],
-    pub chat_parts: Punctuated::<ChatPart, Token![,]>,
+    pub chat_parts: Punctuated<ChatPart, Token![,]>,
 }
 
 impl Parse for LegacyChat {
@@ -200,7 +215,11 @@ impl Parse for LegacyChat {
         let pattern = input.parse()?;
         let comma = input.parse()?;
         let chat_parts = Punctuated::parse_terminated(input)?;
-        Ok(LegacyChat { pattern, comma, chat_parts, })
+        Ok(LegacyChat {
+            pattern,
+            comma,
+            chat_parts,
+        })
     }
 }
 
@@ -235,7 +254,8 @@ mod tests {
 
         #[test]
         fn complex_text() {
-            let text: LegacyChat = parse_quote!("§&", "§&4Hello to §&b§&5world", variable, "§&r§&4!!");
+            let text: LegacyChat =
+                parse_quote!("§&", "§&4Hello to §&b§&5world", variable, "§&r§&4!!");
             assert_eq!("§&", &text.pattern.value());
             assert_eq!(3, text.chat_parts.len());
         }

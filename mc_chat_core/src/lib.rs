@@ -1,13 +1,15 @@
 use proc_macro2::TokenStream;
-use proc_macro_error::{set_dummy, abort};
+use proc_macro_error::{abort, set_dummy};
 use quote::quote;
 
-use crate::parsing::{LegacyChat, map_to_tree};
+use crate::parsing::{map_to_tree, LegacyChat};
 
 mod parsing;
 
 pub fn chat_core(input: TokenStream) -> TokenStream {
-    set_dummy(quote!(unimplemented!("Compile time error in chat!() macro")));
+    set_dummy(quote!(unimplemented!(
+        "Compile time error in chat!() macro"
+    )));
 
     let legacy_chat: LegacyChat = match syn::parse2(input) {
         Ok(parts) => parts,

@@ -19,10 +19,15 @@ fn single_color() {
 
 #[test]
 fn mixed() {
-    let orig_chat = Chat::text("Testing ").color(TextColor::DarkRed).bold(true).obfuscated(true)
-        .child(Chat::text("").bold(true)
-            .child(Chat::text("overly ").color(TextColor::DarkGreen))
-            .child(Chat::text("much").color(TextColor::Gray))
+    let orig_chat = Chat::text("Testing ")
+        .color(TextColor::DarkRed)
+        .bold(true)
+        .obfuscated(true)
+        .child(
+            Chat::text("")
+                .bold(true)
+                .child(Chat::text("overly ").color(TextColor::DarkGreen))
+                .child(Chat::text("much").color(TextColor::Gray)),
         );
     let chat = chat!("§2§3§4§l§kTesting §l§l§2overly §7much");
     assert_eq!(orig_chat, chat);
@@ -31,9 +36,12 @@ fn mixed() {
 #[test]
 fn variable_sub() {
     let variable = String::from("My Variableee");
-    let orig_chat = Chat::text("Var: ").color(TextColor::Blue)
-        .child(Chat::text(variable.clone()).color(TextColor::Purple).underlined(true)
-            .child(Chat::text("!!").color(TextColor::Yellow)));
+    let orig_chat = Chat::text("Var: ").color(TextColor::Blue).child(
+        Chat::text(variable.clone())
+            .color(TextColor::Purple)
+            .underlined(true)
+            .child(Chat::text("!!").color(TextColor::Yellow)),
+    );
     let chat = chat!("§9Var: §5§n", variable, "§e!!");
     assert_eq!(orig_chat, chat);
 }
