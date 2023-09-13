@@ -1,0 +1,56 @@
+# direction: down
+direction: right
+
+Start
+
+select_next: Select next piece
+stap1_2: Current code is color?
+
+stap2y_4: Current parent\nnode is placeholder?
+stap2n_3: Current piece contains text?
+
+end_replace_parent: Make current parent node\nchild of this node and replace
+end_replace_parent_reset: Make current parent\nnode child of this node\nand add this node to\nnew placeholder parent
+end_add_style: Add this style\nto current parent node
+
+stap3n_end: Current parent\nnode is placeholder\nand no children?
+
+stap4n_6: Current piece contains text?
+stap4y_7: Current piece contains text?
+
+end_ignore: ignore this node
+
+stap6n_3: Has current parent\na color assigned?
+
+end_add_to_parent: Add current piece\nto current parent node
+
+Start -> stap1_2
+
+stap1_2 -> stap2y_4: Yes
+stap1_2 -> stap2n_3: No
+
+stap2y_4 -> stap4y_7: Yes
+stap2y_4 -> stap4n_6: No
+
+stap2n_3 -> end_replace_parent: Yes
+stap2n_3 -> stap3n_end: No
+
+stap3n_end -> end_ignore: Yes
+stap3n_end -> end_add_style: No
+
+stap4n_6 -> end_replace_parent_reset: Yes
+stap4n_6 -> stap6n_3: No
+
+stap4y_7 -> end_add_to_parent: Yes
+stap4y_7 -> end_ignore: No
+
+stap6n_3 -> end_ignore: Yes
+stap6n_3 -> end_add_style: No
+
+end_add_to_parent -> select_next
+
+end_replace_parent -> select_next
+end_replace_parent_reset -> select_next
+end_add_style -> select_next
+end_ignore -> select_next
+select_next -> stap1_2

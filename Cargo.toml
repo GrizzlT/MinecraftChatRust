@@ -17,9 +17,12 @@ serde_json = { version = "1.0", optional = true }
 fastsnbt = { git = "https://github.com/owengage/fastnbt", branch = "dev/snbt" }
 uuid = "1.3.2"
 
+mc_chat_proc = { path = "./mc_chat_proc", optional = true }
+
 [dev-dependencies]
 serde_test = "1.0"
 
 [features]
 default = [ "serde" ]
 serde = [ "dep:serde", "serde_json", "uuid/serde"]
+macros = [ "mc_chat_proc" ]
