@@ -1,3 +1,4 @@
+use std::convert::TryFrom;
 use std::fmt::Display;
 #[cfg(not(feature = "palette"))]
 use crate::freeze::FrozenStr;
@@ -96,6 +97,7 @@ impl Display for TextColor {
             TextColor::Yellow => "yellow",
             TextColor::White => "white",
             TextColor::Custom(color) => {
+                #[cfg(feature = "palette")]
                 return write!(f, "{}", format!("{color}"));
                 #[cfg(not(feature = "palette"))]
                 color
@@ -103,5 +105,47 @@ impl Display for TextColor {
             TextColor::Reset => "reset",
         });
         write!(f, "{}", str)
+    }
+}
+
+impl TryFrom<&str> for TextColor {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        Ok(match value {
+            "black" => TextColor::Black,
+            "dark_blue" => TextColor::DarkBlue,
+            "dark_green" => TextColor::DarkGreen,
+            "dark_aqua" => TextColor::DarkCyan,
+            "dark_red" => TextColor::DarkRed,
+            "dark_purple" => TextColor::Purple,
+            "gold" => TextColor::Gold,
+            "gray" => TextColor::Gray,
+            "dark_gray" => TextColor::DarkGray,
+            "blue" => TextColor::Blue,
+            "green" => TextColor::Green,
+            "aqua" => TextColor::Cyan,
+            "red" => TextColor::Red,
+            "light_purple" => TextColor::Pink,
+            "yellow" => TextColor::Yellow,
+            "white" => TextColor::White,
+            "reset" => TextColor::Reset,
+            custom => {
+                #[cfg(not(feature = "palette"))]
+                if custom.len() != 7 || !custom.starts_with('#') {
+                    return Err(());
+                } else {
+                    for c in custom.chars().skip(1) {
+                        if c.is_ascii_hexdigit() {
+                            return Err(());
+                        }
+                    }
+                    TextColor::custom(FrozenStr::from(custom))
+                }
+
+                #[cfg(feature = "palette")]
+                TextColor::Custom(custom.parse().map_err(|_| ())?)
+            }
+        })
     }
 }

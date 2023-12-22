@@ -30,46 +30,12 @@ impl<'de> Deserialize<'de> for TextColor {
         D: Deserializer<'de>,
     {
         let input = FrozenStr::deserialize(deserializer)?;
-        Ok(match input.deref() {
-            "black" => TextColor::Black,
-            "dark_blue" => TextColor::DarkBlue,
-            "dark_green" => TextColor::DarkGreen,
-            "dark_aqua" => TextColor::DarkCyan,
-            "dark_red" => TextColor::DarkRed,
-            "dark_purple" => TextColor::Purple,
-            "gold" => TextColor::Gold,
-            "gray" => TextColor::Gray,
-            "dark_gray" => TextColor::DarkGray,
-            "blue" => TextColor::Blue,
-            "green" => TextColor::Green,
-            "aqua" => TextColor::Cyan,
-            "red" => TextColor::Red,
-            "light_purple" => TextColor::Pink,
-            "yellow" => TextColor::Yellow,
-            "white" => TextColor::White,
-            "reset" => TextColor::Reset,
-            custom => {
-                let error = serde::de::Error::invalid_value(
-                    Unexpected::Str(custom),
-                    &"a 6 digit hex color prefixed by '#'",
-                );
-
-                #[cfg(not(feature = "palette"))]
-                if custom.len() != 7 || !custom.starts_with('#') {
-                    return Err(error);
-                } else {
-                    for c in custom.chars().skip(1) {
-                        if c.is_ascii_hexdigit() {
-                            return Err(error);
-                        }
-                    }
-                    TextColor::custom(input)
-                }
-
-                #[cfg(feature = "palette")]
-                TextColor::Custom(custom.parse().map_err(|_| error)?)
-            }
-        })
+        TextColor::try_from(input.deref()).map_err(|_|
+            serde::de::Error::invalid_value(
+                Unexpected::Str(&*input),
+                &"a 5 digit hex color prefixed by '#'",
+            )
+        )
     }
 }
 
