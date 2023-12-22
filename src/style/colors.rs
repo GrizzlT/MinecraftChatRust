@@ -206,6 +206,16 @@ mod custom_colors_to_legacy {
                 color => color
             }
         }
+
+        /// Converts [TextColor::Custom] to legacy [TextColor] values using [palette::color_difference::EuclideanDistance]
+        ///
+        /// ```rust
+        ///  use mc_chat::{Rgb, TextColor};
+        ///  assert_eq!(
+        ///     TextColor::Custom(Rgb::from((0, 0, 0))).to_legacy_ciede2000(),
+        ///     TextColor::Black
+        ///  )
+        /// ```
         pub fn to_legacy_ciede2000(self) -> Self {
             self.into_legacy(|first, second| {
                 let first: Lab = first.0.into_linear().into_color();
@@ -214,6 +224,16 @@ mod custom_colors_to_legacy {
                 first.difference(second)
             })
         }
+
+        /// Converts [TextColor::Custom] to legacy [TextColor] values using [palette::color_difference::Ciede2000]
+        ///
+        /// ```rust
+        ///  use mc_chat::{Rgb, TextColor};
+        ///  assert_eq!(
+        ///     TextColor::Custom(Rgb::from((255, 255, 255))).to_legacy_euclidean(),
+        ///     TextColor::White
+        ///  )
+        /// ```
         pub fn to_legacy_euclidean(self) -> TextColor {
             self.into_legacy(|first, second| {
                 let first: Lab = first.0.into_linear().into_color();
@@ -227,14 +247,3 @@ mod custom_colors_to_legacy {
 
 #[cfg(feature = "palette")]
 pub use self::custom_colors_to_legacy::*;
-
-#[cfg(feature = "palette")]
-#[cfg(test)]
-mod tests {
-    use crate::{Rgb, TextColor};
-
-    #[test]
-    fn test_ciede200_conversion() {
-        assert_eq!(TextColor::Custom(Rgb::from((0, 0, 0))).to_legacy_ciede2000(), TextColor::Black)
-    }
-}
