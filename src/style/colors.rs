@@ -158,9 +158,7 @@ impl TryFrom<&str> for TextColor {
 
 #[cfg(feature = "palette")]
 mod custom_colors_to_legacy {
-    //use palette::color_difference::EuclideanDistance;
     use palette::{IntoColor, Lab};
-    use palette::white_point::Any;
     use crate::{Rgb, TextColor};
     use palette::color_difference::{Ciede2000, EuclideanDistance};
 
@@ -192,11 +190,11 @@ mod custom_colors_to_legacy {
                 TextColor::Custom(data) => {
                     let mut min: Option<(TextColor, T)> = None;
                     for (color, rgb) in RGB_COLORS {
-                        let result = delta_fn(data, Rgb::from(rgb));
+                        let delta = delta_fn(data, Rgb::from(rgb));
                         if let Some((_, value)) = &min {
-                            if result < *value { min = Some((color, result)) }
+                            if value > &delta { min = Some((color, delta)) }
                         } else {
-                            min = Some((color, result))
+                            min = Some((color, delta))
                         }
                     }
 
