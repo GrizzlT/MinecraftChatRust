@@ -12,7 +12,7 @@ mod rgb {
     use palette::Srgb;
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    pub struct Rgb(pub palette::rgb::Rgb<Srgb, u8>);
+    pub struct Rgb(pub Srgb<u8>);
 
     impl Hash for Rgb {
         fn hash<H: Hasher>(&self, state: &mut H) {
@@ -27,6 +27,12 @@ mod rgb {
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             Ok(Self(s.parse()?))
+        }
+    }
+
+    impl From<(u8, u8, u8)> for Rgb {
+        fn from(value: (u8, u8, u8)) -> Self {
+            Self(palette::rgb::Rgb::from([value.0, value.1, value.2]))
         }
     }
 
@@ -147,5 +153,82 @@ impl TryFrom<&str> for TextColor {
                 TextColor::Custom(custom.parse().map_err(|_| ())?)
             }
         })
+    }
+}
+
+#[cfg(feature = "palette")]
+mod custom_colors_to_legacy {
+    //use palette::color_difference::EuclideanDistance;
+    use palette::{IntoColor, Lab};
+    use palette::white_point::Any;
+    use crate::{Rgb, TextColor};
+    use palette::color_difference::{Ciede2000, EuclideanDistance};
+
+    pub const RGB_COLORS: [(TextColor, (u8, u8, u8)); 16] = [
+        (TextColor::Black, (0, 0, 0)),
+        (TextColor::DarkBlue, (0, 0, 170)),
+        (TextColor::DarkGreen, (0, 170, 0)),
+        (TextColor::DarkCyan, (0, 170, 170)),
+        (TextColor::DarkRed, (170, 0, 0)),
+        (TextColor::Purple, (170, 0, 170)),
+        (TextColor::Gold, (255, 170, 0)),
+        (TextColor::Gray, (170, 170, 170)),
+        (TextColor::DarkGray, (85, 85, 85)),
+        (TextColor::Blue, (85, 85, 255)),
+        (TextColor::Green, (85, 255, 85)),
+        (TextColor::Cyan, (85, 255, 255)),
+        (TextColor::Red, (255, 85, 85)),
+        (TextColor::Pink, (255, 85, 255)),
+        (TextColor::Yellow, (255, 255, 85)),
+        (TextColor::White, (255, 255, 255))
+    ];
+
+    type ColorCompereFn<T> = fn(Rgb, Rgb) -> T;
+
+    impl TextColor {
+
+        fn into_legacy<T: PartialOrd>(self, delta_fn: ColorCompereFn<T>) -> Self {
+            match self {
+                TextColor::Custom(data) => {
+                    let mut min: Option<(TextColor, T)> = None;
+                    for (color, rgb) in RGB_COLORS {
+                        let result = delta_fn(data, Rgb::from(rgb));
+                        if let Some((_, value)) = &min {
+                            if result < *value { min = Some((color, result)) }
+                        } else {
+                            min = Some((color, result))
+                        }
+                    }
+
+                    match min {
+                        Some((color, _)) => color,
+                        None => unreachable!()
+                    }
+                }
+                color => color
+            }
+        }
+        pub fn to_legacy_ciede2000(self) -> Self {
+            self.into_legacy(|first, second| {
+                let first: Lab = first.0.into_linear().into_color();
+                let second: Lab = second.0.into_linear().into_color();
+
+                first.difference(second)
+            })
+        }
+    }
+}
+
+#[cfg(feature = "palette")]
+pub use self::custom_colors_to_legacy::*;
+
+#[cfg(feature = "palette")]
+#[cfg(test)]
+mod tests {
+    use crate::{Rgb, TextColor};
+
+    #[test]
+    fn test_ciede200_conversion() {
+        assert_eq!(TextColor::Custom(Rgb::from((0, 0, 0))).to_legacy_ciede2000(), TextColor::Black)
     }
 }
