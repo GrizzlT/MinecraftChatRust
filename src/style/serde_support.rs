@@ -11,33 +11,15 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::style::{ClickEvent, HoverEvent, Style, TextColor};
+use crate::style::{ClickEvent, HoverEvent, Style};
+use crate::style::colors::TextColor;
 
 impl Serialize for TextColor {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_str(match self {
-            TextColor::Black => "black",
-            TextColor::DarkBlue => "dark_blue",
-            TextColor::DarkGreen => "dark_green",
-            TextColor::DarkCyan => "dark_aqua",
-            TextColor::DarkRed => "dark_red",
-            TextColor::Purple => "dark_purple",
-            TextColor::Gold => "gold",
-            TextColor::Gray => "gray",
-            TextColor::DarkGray => "dark_gray",
-            TextColor::Blue => "blue",
-            TextColor::Green => "green",
-            TextColor::Cyan => "aqua",
-            TextColor::Red => "red",
-            TextColor::Pink => "light_purple",
-            TextColor::Yellow => "yellow",
-            TextColor::White => "white",
-            TextColor::Custom(color) => color,
-            TextColor::Reset => "reset",
-        })
+        serializer.serialize_str(&*self.to_string())
     }
 }
 
@@ -71,16 +53,21 @@ impl<'de> Deserialize<'de> for TextColor {
                     Unexpected::Str(custom),
                     &"a 6 digit hex color prefixed by '#'",
                 );
+
+                #[cfg(not(feature = "palette"))]
                 if custom.len() != 7 || !custom.starts_with('#') {
                     return Err(error);
                 } else {
-                    for c in custom.chars() {
-                        if !"0123456789abcdefABCDEF".contains(c) {
+                    for c in custom.chars().skip(1) {
+                        if c.is_ascii_hexdigit() {
                             return Err(error);
                         }
                     }
                     TextColor::custom(input)
                 }
+
+                #[cfg(feature = "palette")]
+                TextColor::Custom(custom.parse().map_err(|_| error)?)
             }
         })
     }

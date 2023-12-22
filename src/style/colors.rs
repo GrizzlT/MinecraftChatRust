@@ -74,3 +74,33 @@ impl TextColor {
         TextColor::Custom(color.into())
     }
 }
+
+impl ToString for TextColor {
+    fn to_string(&self) -> String {
+        String::from(match self {
+            TextColor::Black => "black",
+            TextColor::DarkBlue => "dark_blue",
+            TextColor::DarkGreen => "dark_green",
+            TextColor::DarkCyan => "dark_aqua",
+            TextColor::DarkRed => "dark_red",
+            TextColor::Purple => "dark_purple",
+            TextColor::Gold => "gold",
+            TextColor::Gray => "gray",
+            TextColor::DarkGray => "dark_gray",
+            TextColor::Blue => "blue",
+            TextColor::Green => "green",
+            TextColor::Cyan => "aqua",
+            TextColor::Red => "red",
+            TextColor::Pink => "light_purple",
+            TextColor::Yellow => "yellow",
+            TextColor::White => "white",
+            TextColor::Custom(color) => {
+                #[cfg(feature = "palette")]
+                return format!("{color}");
+                #[cfg(not(feature = "palette"))]
+                color
+            },
+            TextColor::Reset => "reset",
+        })
+    }
+}
