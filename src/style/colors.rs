@@ -214,6 +214,14 @@ mod custom_colors_to_legacy {
                 first.difference(second)
             })
         }
+        pub fn to_legacy_euclidean(self) -> TextColor {
+            self.into_legacy(|first, second| {
+                let first: Lab = first.0.into_linear().into_color();
+                let second: Lab = second.0.into_linear().into_color();
+
+                first.distance(second)
+            })
+        }
     }
 }
 
