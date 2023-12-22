@@ -1,3 +1,4 @@
+use std::fmt::Display;
 #[cfg(not(feature = "palette"))]
 use crate::freeze::FrozenStr;
 
@@ -75,9 +76,9 @@ impl TextColor {
     }
 }
 
-impl ToString for TextColor {
-    fn to_string(&self) -> String {
-        String::from(match self {
+impl Display for TextColor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = String::from(match self {
             TextColor::Black => "black",
             TextColor::DarkBlue => "dark_blue",
             TextColor::DarkGreen => "dark_green",
@@ -95,12 +96,12 @@ impl ToString for TextColor {
             TextColor::Yellow => "yellow",
             TextColor::White => "white",
             TextColor::Custom(color) => {
-                #[cfg(feature = "palette")]
-                return format!("{color}");
+                return write!(f, "{}", format!("{color}"));
                 #[cfg(not(feature = "palette"))]
                 color
             },
             TextColor::Reset => "reset",
-        })
+        });
+        write!(f, "{}", str)
     }
 }
