@@ -46,32 +46,48 @@ mod rgb {
 #[cfg(feature = "palette")]
 pub use self::rgb::*;
 
-/// The different colors a [`Chat`] component can have.
+/// The different colors a [`crate::Chat`] component can have.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TextColor {
+    /// RGB = (0, 0, 0)
     Black,
+    /// RGB = (0, 0, 170)
     DarkBlue,
+    /// RGB = (0, 170, 0)
     DarkGreen,
+    /// RGB = (0, 170, 170)
     DarkCyan,
+    /// RGB = (170, 0, 0)
     DarkRed,
+    /// RGB = (170, 0, 170)
     Purple,
+    /// RGB = (255, 170, 0)
     Gold,
+    /// RGB = (170, 170, 170)
     Gray,
+    /// RGB = (85, 85, 85)
     DarkGray,
+    /// RGB = (85, 85, 255)
     Blue,
+    /// RGB = (85, 255, 85)
     Green,
+    /// RGB = (85, 255, 255)
     Cyan,
+    /// RGB = (255, 85, 85)
     Red,
+    /// RGB = (255, 85, 255)
     Pink,
+    /// RGB = (255, 255, 85)
     Yellow,
+    /// RGB = (255, 255, 255
     White,
     /// This field is ignored for versions older than 1.16.
     ///
     /// See [`TextColor::custom()`].
     #[cfg(not(feature = "palette"))]
     Custom(FrozenStr),
-    /// This field is ignored for versions older than 1.16.
     #[cfg(feature = "palette")]
+    /// This field is ignored for versions older than 1.16.
     Custom(Rgb),
     Reset,
 }
@@ -184,7 +200,6 @@ mod custom_colors_to_legacy {
     type ColorCompereFn<T> = fn(Rgb, Rgb) -> T;
 
     impl TextColor {
-
         fn into_legacy<T: PartialOrd>(self, delta_fn: ColorCompereFn<T>) -> Self {
             match self {
                 TextColor::Custom(data) => {
@@ -207,7 +222,7 @@ mod custom_colors_to_legacy {
             }
         }
 
-        /// Converts [TextColor::Custom] to legacy [TextColor] values using [palette::color_difference::EuclideanDistance]
+        /// Converts [`TextColor::Custom`] to legacy [`TextColor`] values using [`EuclideanDistance`]
         ///
         /// ```rust
         ///  use mc_chat::{Rgb, TextColor};
@@ -225,7 +240,7 @@ mod custom_colors_to_legacy {
             })
         }
 
-        /// Converts [TextColor::Custom] to legacy [TextColor] values using [palette::color_difference::Ciede2000]
+        /// Converts [`TextColor::Custom`] to legacy [`TextColor`] values using [`Ciede2000`]
         ///
         /// ```rust
         ///  use mc_chat::{Rgb, TextColor};
