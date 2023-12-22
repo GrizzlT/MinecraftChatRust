@@ -48,6 +48,7 @@ pub use self::rgb::*;
 
 /// The different colors a [`crate::Chat`] component can have.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "palette", derive(Copy))]
 pub enum TextColor {
     /// RGB = (0, 0, 0)
     Black,
@@ -174,9 +175,26 @@ impl TryFrom<&str> for TextColor {
 
 #[cfg(feature = "palette")]
 mod custom_colors_to_legacy {
+    use std::cmp::Ordering;
     use palette::{IntoColor, Lab};
     use crate::{Rgb, TextColor};
     use palette::color_difference::{Ciede2000, EuclideanDistance};
+
+    #[derive(Clone, Copy, PartialOrd, PartialEq)]
+    struct Float32Wrapper(f32);
+
+    impl Eq for Float32Wrapper {}
+    impl Ord for Float32Wrapper {
+        fn cmp(&self, other: &Self) -> Ordering {
+            if self.0 == other.0 {
+                Ordering::Equal
+            } else if self.0 > other.0 {
+                Ordering::Greater
+            } else {
+                Ordering::Less
+            }
+        }
+    }
 
     pub const RGB_COLORS: [(TextColor, (u8, u8, u8)); 16] = [
         (TextColor::Black, (0, 0, 0)),
@@ -200,26 +218,19 @@ mod custom_colors_to_legacy {
     type ColorCompereFn<T> = fn(Rgb, Rgb) -> T;
 
     impl TextColor {
-        fn into_legacy<T: PartialOrd>(self, delta_fn: ColorCompereFn<T>) -> Self {
-            match self {
-                TextColor::Custom(data) => {
-                    let mut min: Option<(TextColor, T)> = None;
-                    for (color, rgb) in RGB_COLORS {
-                        let delta = delta_fn(data, Rgb::from(rgb));
-                        if let Some((_, value)) = &min {
-                            if value > &delta { min = Some((color, delta)) }
-                        } else {
-                            min = Some((color, delta))
-                        }
-                    }
-
-                    match min {
-                        Some((color, _)) => color,
-                        None => unreachable!()
-                    }
-                }
-                color => color
-            }
+        fn into_legacy<T>(self, delta_fn: ColorCompereFn<T>) -> Self where T: Copy, T: Ord {
+            if let TextColor::Custom(data) = self {
+                *RGB_COLORS.iter()
+                    .map(|(color, rgb)| {
+                        let delta = delta_fn(data, Rgb::from(*rgb));
+                        (color, delta)
+                    })
+                    .min_by_key(|(_, delta)| *delta)
+                    .map_or_else(
+                        || unreachable!(), // impossible as long as RGB_COLORS.len() != 0
+                        |(color, _)| color
+                    )
+            } else { self }
         }
 
         /// Converts [`TextColor::Custom`] to legacy [`TextColor`] values using [`EuclideanDistance`]
@@ -227,16 +238,16 @@ mod custom_colors_to_legacy {
         /// ```rust
         ///  use mc_chat::{Rgb, TextColor};
         ///  assert_eq!(
-        ///     TextColor::Custom(Rgb::from((0, 0, 0))).to_legacy_ciede2000(),
+        ///     TextColor::Custom(Rgb::from((0, 0, 0))).into_legacy_ciede2000(),
         ///     TextColor::Black
         ///  )
         /// ```
-        pub fn to_legacy_ciede2000(self) -> Self {
+        pub fn into_legacy_ciede2000(self) -> Self {
             self.into_legacy(|first, second| {
                 let first: Lab = first.0.into_linear().into_color();
                 let second: Lab = second.0.into_linear().into_color();
 
-                first.difference(second)
+                Float32Wrapper(first.difference(second))
             })
         }
 
@@ -245,16 +256,16 @@ mod custom_colors_to_legacy {
         /// ```rust
         ///  use mc_chat::{Rgb, TextColor};
         ///  assert_eq!(
-        ///     TextColor::Custom(Rgb::from((255, 255, 255))).to_legacy_euclidean(),
+        ///     TextColor::Custom(Rgb::from((255, 255, 255))).into_legacy_euclidean(),
         ///     TextColor::White
         ///  )
         /// ```
-        pub fn to_legacy_euclidean(self) -> TextColor {
+        pub fn into_legacy_euclidean(self) -> TextColor {
             self.into_legacy(|first, second| {
                 let first: Lab = first.0.into_linear().into_color();
                 let second: Lab = second.0.into_linear().into_color();
 
-                first.distance(second)
+                Float32Wrapper(first.distance(second))
             })
         }
     }
