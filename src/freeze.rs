@@ -1,15 +1,17 @@
+//! Internal abstraction for string cloning efficiency.
+//!
 //! In Minecraft's chat data type, strings get nested a lot. Chat gets
 //! used a lot, so this needs to be optimized. There are two main options for
-//! efficient, immutable strings: [`Arc<str>`] and [`Box<str>`].
+//! efficient, immutable strings: [`Arc<str>`](std::sync::Arc) and [`Box<str>`].
 //!
 //! In a typical server's perspective, there are the following scenarios:
 //! - A player sends a message to the server -> the server broadcasts this message.
 //! - The server sends a message to all players (usually more [`Style`](crate::Style) applied).
 //!
-//! For an optimized server, this will be done asynchronously. While [`Arc<str>`]
+//! For an optimized server, this will be done asynchronously. While [`Arc<str>`](std::sync::Arc)
 //! seems interesting for lots of cloning without overhead, it's less efficient
 //! to create a lot of small reference counted objects instead of wrapping the
-//! whole chat component in a single [`Arc`]. This means that [`FrozenStr`] is
+//! whole chat component in a single [`Arc`](std::sync::Arc). This means that [`FrozenStr`] is
 //! implemented as a simple wrapper around [`Box<str>`].
 //!
 
