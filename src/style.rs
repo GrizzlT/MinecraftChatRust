@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 #[cfg(feature = "serde")]
 pub(crate) mod serde_support;
+mod colors;
+
+pub use colors::*;
 
 /// The style of a [`Chat`] component.
 ///
@@ -118,40 +121,6 @@ impl Style {
     }
 }
 
-/// The different colors a [`Chat`] component can have.
-///
-/// ## TODO: Automatically find nearest value when serializing [`TextColor::Custom`] for older versions
-/// --> feature PR
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum TextColor {
-    Black,
-    DarkBlue,
-    DarkGreen,
-    DarkCyan,
-    DarkRed,
-    Purple,
-    Gold,
-    Gray,
-    DarkGray,
-    Blue,
-    Green,
-    Cyan,
-    Red,
-    Pink,
-    Yellow,
-    White,
-    /// This field is ignored for versions older than 1.16.
-    ///
-    /// See [`TextColor::custom()`].
-    Custom(FrozenStr),
-    Reset,
-}
-
-impl TextColor {
-    pub fn custom<T: Into<FrozenStr>>(color: T) -> TextColor {
-        TextColor::Custom(color.into())
-    }
-}
 
 /// A ClickEvent useful in a chat message or book.
 /// TODO: Discuss feature gated `open_file` option

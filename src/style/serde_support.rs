@@ -11,33 +11,15 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_json::Value;
 use uuid::Uuid;
 
-use crate::style::{ClickEvent, HoverEvent, Style, TextColor};
+use crate::style::{ClickEvent, HoverEvent, Style};
+use crate::style::colors::TextColor;
 
 impl Serialize for TextColor {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
-        serializer.serialize_str(match self {
-            TextColor::Black => "black",
-            TextColor::DarkBlue => "dark_blue",
-            TextColor::DarkGreen => "dark_green",
-            TextColor::DarkCyan => "dark_aqua",
-            TextColor::DarkRed => "dark_red",
-            TextColor::Purple => "dark_purple",
-            TextColor::Gold => "gold",
-            TextColor::Gray => "gray",
-            TextColor::DarkGray => "dark_gray",
-            TextColor::Blue => "blue",
-            TextColor::Green => "green",
-            TextColor::Cyan => "aqua",
-            TextColor::Red => "red",
-            TextColor::Pink => "light_purple",
-            TextColor::Yellow => "yellow",
-            TextColor::White => "white",
-            TextColor::Custom(color) => color,
-            TextColor::Reset => "reset",
-        })
+        serializer.serialize_str(&*self.to_string())
     }
 }
 
@@ -48,41 +30,12 @@ impl<'de> Deserialize<'de> for TextColor {
         D: Deserializer<'de>,
     {
         let input = FrozenStr::deserialize(deserializer)?;
-        Ok(match input.deref() {
-            "black" => TextColor::Black,
-            "dark_blue" => TextColor::DarkBlue,
-            "dark_green" => TextColor::DarkGreen,
-            "dark_aqua" => TextColor::DarkCyan,
-            "dark_red" => TextColor::DarkRed,
-            "dark_purple" => TextColor::Purple,
-            "gold" => TextColor::Gold,
-            "gray" => TextColor::Gray,
-            "dark_gray" => TextColor::DarkGray,
-            "blue" => TextColor::Blue,
-            "green" => TextColor::Green,
-            "aqua" => TextColor::Cyan,
-            "red" => TextColor::Red,
-            "light_purple" => TextColor::Pink,
-            "yellow" => TextColor::Yellow,
-            "white" => TextColor::White,
-            "reset" => TextColor::Reset,
-            custom => {
-                let error = serde::de::Error::invalid_value(
-                    Unexpected::Str(custom),
-                    &"a 6 digit hex color prefixed by '#'",
-                );
-                if custom.len() != 7 || !custom.starts_with('#') {
-                    return Err(error);
-                } else {
-                    for c in custom.chars() {
-                        if !"0123456789abcdefABCDEF".contains(c) {
-                            return Err(error);
-                        }
-                    }
-                    TextColor::custom(input)
-                }
-            }
-        })
+        TextColor::try_from(input.deref()).map_err(|_|
+            serde::de::Error::invalid_value(
+                Unexpected::Str(&*input),
+                &"a 5 digit hex color prefixed by '#'",
+            )
+        )
     }
 }
 
