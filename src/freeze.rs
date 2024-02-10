@@ -6,13 +6,14 @@
 //! - A player sends a message to the server -> the server broadcasts this message.
 //! - The server sends a message to all players (usually more [`Style`](crate::Style) applied).
 //!
-//! For an optimized server, this will be done asynchronously. This means it
-//! is more worthwhile to choose [`Arc<str>`] over [`Box<str>`] since it requires
-//! less data copies. This is how [`FrozenStr`] is implemented: it's a simple
-//! wrapper around [`Arc<str>`].
+//! For an optimized server, this will be done asynchronously. While [`Arc<str>`]
+//! seems interesting for lots of cloning without overhead, it's less efficient
+//! to create a lot of small reference counted objects instead of wrapping the
+//! whole chat component in a single [`Arc`]. This means that [`FrozenStr`] is
+//! implemented as a simple wrapper around [`Box<str>`].
 //!
 
-use std::{fmt::Display, ops::Deref, sync::Arc};
+use std::{fmt::Display, ops::Deref};
 
 use serde::{de::Visitor, Deserialize, Serialize};
 
@@ -21,7 +22,7 @@ use serde::{de::Visitor, Deserialize, Serialize};
 /// See the [module](self)'s documentation.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct FrozenStr {
-    str: Arc<str>,
+    str: Box<str>,
 }
 
 impl Display for FrozenStr {
@@ -32,7 +33,7 @@ impl Display for FrozenStr {
 
 impl<T> From<T> for FrozenStr
 where
-    T: Into<Arc<str>>,
+    T: Into<Box<str>>,
 {
     fn from(str: T) -> Self {
         Self { str: str.into() }
